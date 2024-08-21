@@ -43,6 +43,17 @@
 //  |__/ |___ |    | | \| |___ .__/
 //
 //==============================================================================
+#define LORA_MISO 	GPIO_NUM_19
+#define LORA_MOSI	GPIO_NUM_23	
+#define LORA_SCK	GPIO_NUM_18
+#define LORA_CSn	GPIO_NUM_5
+#define LORA_RESETn	GPIO_NUM_32
+#define LORA_DIO2	GPIO_NUM_33
+#define LORA_DIO1	GPIO_NUM_25
+#define LORA_BUSY	GPIO_NUM_26
+#define LORA_DIO3	GPIO_NUM_27
+#define DRIVE_HIGH 	1
+#define DRIVE_LOW	0
 
 //==============================================================================
 //  ___      __   ___  __   ___  ___  __
@@ -65,7 +76,9 @@
 //  |    \__/ |__) |___ | \__,    |    \__/ | \| \__,  |  | \__/ | \| .__/
 //
 //==============================================================================
-
+void lora_spi_init(void);
+void lora_io_init(void);
+void lora_spi_remove(void);
 
 
 #endif /* MAIN_LORA_LLC68_H_ */
