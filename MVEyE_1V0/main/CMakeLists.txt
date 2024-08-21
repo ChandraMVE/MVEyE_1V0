@@ -1,2 +1,2 @@
-idf_component_register(SRCS "MVEyE_1V0.c"
+idf_component_register(SRCS "MVEyE_1V0.c" "leds.c"
                     INCLUDE_DIRS "")

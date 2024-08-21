@@ -1,8 +1,8 @@
 //-----------------------------------------------------------------
 ///
-///     \file MVEyE_1V0.c
+///     \file leds.c
 ///
-///     \brief main application driver file
+///     \brief led driver file
 ///
 ///
 ///     \author       Chandrashekhar Venkatesh
@@ -34,17 +34,17 @@
 //  | | \| \__, |___ \__/ |__/ |___ .__/
 //
 //==============================================================================
-#include <stdio.h>
-#include <inttypes.h>
-#include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "esp_chip_info.h"
-#include "esp_flash.h"
 #include "esp_system.h"
-#include "leds.h"
+#include "esp_log.h"
+#include "driver/uart.h"
 #include "soc/gpio_periph.h"
-
+#include "soc/io_mux_reg.h"
+#include "string.h"
+#include "driver/gpio.h"
+#include "stdbool.h"
+#include "leds.h"
 //==============================================================================
 //   __   ___  ___         ___  __
 //  |  \ |__  |__  | |\ | |__  /__`
@@ -58,7 +58,7 @@
 //  \__> |___ \__/ |__) /~~\ |___     \/  /~~\ |  \ .__/
 //
 //==============================================================================
-
+bool state_led = true;
 //==============================================================================
 //   __  ___      ___    __                __   __
 //  /__`  |   /\   |  | /  `    \  /  /\  |__) /__`
@@ -67,73 +67,73 @@
 //==============================================================================
 
 /*******************************************************************************
- * Function name  : get_esp32_version
+ * Function name  : leds_task
  *
- * Description    : function to print the esp32 chip version parameters
- * Parameters     : None
+ * Description    : function to manage all leds
+ * Parameters     : pvParameters
  * Returns        : None
  *
  * Known Issues   :
  * Note           :
  * author         : Chandrashekhar Venkatesh
- * date           : 12AUG2024
+ * date           : 20AUG2024
  ******************************************************************************/
-void get_esp32_version(void)
+static void leds_task(void *pvParameters)
 {
-    printf("Welcome MVEyE 1V0 Development\n");
-    /* Print chip information */
-    esp_chip_info_t chip_info;
-    uint32_t flash_size;
-    esp_chip_info(&chip_info);
-    printf("This is %s chip with %d CPU core(s), %s%s%s%s, ",
-           CONFIG_IDF_TARGET,
-           chip_info.cores,
-           (chip_info.features & CHIP_FEATURE_WIFI_BGN) ? "WiFi/" : "",
-           (chip_info.features & CHIP_FEATURE_BT) ? "BT" : "",
-           (chip_info.features & CHIP_FEATURE_BLE) ? "BLE" : "",
-           (chip_info.features & CHIP_FEATURE_IEEE802154) ? ", 802.15.4 (Zigbee/Thread)" : "");
-
-    unsigned major_rev = chip_info.revision / 100;
-    unsigned minor_rev = chip_info.revision % 100;
-    printf("silicon revision v%d.%d, ", major_rev, minor_rev);
-    if(esp_flash_get_size(NULL, &flash_size) != ESP_OK) {
-        printf("Get flash size failed");
-        return;
-    }
-
-    printf("%" PRIu32 "MB %s flash\n", flash_size / (uint32_t)(1024 * 1024),
-           (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
-
-    printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-#if 0
-    printf("Restarting now.\n");
-    fflush(stdout);
-    esp_restart();
-#endif
+	while(1)
+	{
+		gpio_set_level(GREEN_LED, (uint32_t)state_led);
+		gpio_set_level(BLUE_LED, (uint32_t)state_led);
+		gpio_set_level(RED_LED, (uint32_t)state_led);
+		vTaskDelay(250 / portTICK_PERIOD_MS);
+		state_led = !state_led;
+	}
+	
 }
 
 /*******************************************************************************
- * Function name  : app_main
+ * Function name  : create_leds_task
  *
- * Description    : function for main app
- * Parameters     : None
+ * Description    : function to create a task manager for leds
+ * Parameters     : pvParameters
  * Returns        : None
  *
  * Known Issues   :
  * Note           :
  * author         : Chandrashekhar Venkatesh
- * date           : 12AUG2024
+ * date           : 20AUG2024
  ******************************************************************************/
-void app_main(void)
+void create_leds_task(void)
 {
-    get_esp32_version();
-    init_leds();
-    create_leds_task();
+	xTaskCreate(leds_task, "leds_task", 1024, NULL, 10, NULL);
+}
 
-    while(1)
-    {
-		printf("MVEyE active\n");
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
-	}
+/*******************************************************************************
+ * Function name  : init_leds
+ *
+ * Description    : function to initialize the leds as output
+ * Parameters     : void
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Chandrashekhar Venkatesh
+ * date           : 20AUG2024
+ ******************************************************************************/
+void init_leds(void)
+{
+	//Special care for JTAG pins
+    PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[GREEN_LED], PIN_FUNC_GPIO);
+	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[BLUE_LED], PIN_FUNC_GPIO);
+	PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[RED_LED], PIN_FUNC_GPIO);
+	
+	//Configure all LEDs as output
+	gpio_set_direction(GREEN_LED, GPIO_MODE_OUTPUT);
+	gpio_set_direction(BLUE_LED, GPIO_MODE_OUTPUT);
+	gpio_set_direction(RED_LED, GPIO_MODE_OUTPUT);
+	
+	//Set all LEDs default Off state
+	gpio_set_level(GREEN_LED, (uint32_t)state_led);
+	gpio_set_level(BLUE_LED, (uint32_t)state_led);
+	gpio_set_level(RED_LED,(uint32_t)state_led);
 }
