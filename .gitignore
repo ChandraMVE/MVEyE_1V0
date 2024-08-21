@@ -1,6 +1,6 @@
 #Ignore all build files
 MVEyE_1V0/build
-.*
+
 MVEyE_1V0/.*
 
 #Ignore all project setting files
