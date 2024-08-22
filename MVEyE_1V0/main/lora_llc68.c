@@ -274,8 +274,9 @@ uint8_t spi_transfer(uint8_t address)
 
 	ESP_LOGI(TAG, "LLCC68 installed");
 	SetStandby(LLCC68_STANDBY_RC);
-
+#if 0
 	SetDio2AsRfSwitchCtrl(true);
+#endif
 	ESP_LOGI(TAG, "tcxoVoltage=%f", tcxoVoltage);
 	// set TCXO control, if requested
 	if(tcxoVoltage > 0.0) {
@@ -1167,7 +1168,7 @@ void SetRx(uint32_t timeout)
 		sys_delay_ms(1);
 	}
 	if ((GetStatus() & 0x70) != 0x50) {
-		ESP_LOGE(TAG, "SetRx Illegal Status");
+		ESP_LOGE(TAG, "SetRx Illegal Status = 0x%x", GetStatus());
 		LoRaError(ERR_INVALID_SETRX_STATE);
 	}
 }
@@ -1190,7 +1191,7 @@ void SetRx(uint32_t timeout)
 		ESP_LOGI(TAG, "SetRxEnable:SX126x_TXEN=%d SX126x_RXEN=%d", LLCC68_TXEN, LLCC68_RXEN);
 	}
 	if ((LLCC68_TXEN != -1) && (LLCC68_RXEN != -1)) {
-		gpio_set_level(LLCC68_RXEN, HIGH);
+//		gpio_set_level(LLCC68_RXEN, HIGH);
 		gpio_set_level(LLCC68_TXEN, LOW);
 	}
 }
@@ -1256,7 +1257,7 @@ void SetRx(uint32_t timeout)
 		ESP_LOGI(TAG, "SetTxEnable:SX126x_TXEN=%d SX126x_RXEN=%d", LLCC68_TXEN, LLCC68_RXEN);
 	}
 	if ((LLCC68_TXEN != -1) && (LLCC68_RXEN != -1)){
-		gpio_set_level(LLCC68_RXEN, LOW);
+//		gpio_set_level(LLCC68_RXEN, LOW);
 		gpio_set_level(LLCC68_TXEN, HIGH);
 	}
 }

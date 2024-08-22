@@ -46,6 +46,7 @@
 #include "leds.h"
 #include "soc/gpio_periph.h"
 #include "lora_llc68.h"
+#include "lora_app.h"
 
 //==============================================================================
 //   __   ___  ___         ___  __
@@ -133,7 +134,8 @@ void app_main(void)
     get_esp32_version();
     init_leds();
     create_leds_task();
-    LoRaInit();
+    LoRaAppInit();
+    create_lora_task();
 
     while(1)
     {
