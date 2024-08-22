@@ -39,6 +39,7 @@
 #include "driver/gpio.h"
 #include "esp_log.h"
 #include "lora_llc68.h"
+#include <string.h>
 //==============================================================================
 //   __   ___  ___         ___  __
 //  |  \ |__  |__  | |\ | |__  /__`
@@ -68,7 +69,8 @@ spi_device_interface_config_t lora_devcfg={
         .clock_speed_hz=12*1000*1000,           //Clock out at 12 MHz
         .mode=0,                                //SPI mode 0
         .spics_io_num= -1,//LORA_SPI_CS,             //CS pin
-        .queue_size=7                           //We want to be able to queue 7 transactions at a time
+        .queue_size=7,                           //We want to be able to queue 7 transactions at a time
+        .address_bits = 8
 };
 //==============================================================================
 //   __  ___      ___    __                __   __
@@ -149,7 +151,7 @@ void lora_spi_remove(void)
  ******************************************************************************/
 static void lora_cs_low(void)
 {
-	gpio_set_level(LORA_RESETn, DRIVE_LOW);
+	gpio_set_level(LORA_CSn, DRIVE_LOW);
 }
 
 /*******************************************************************************
@@ -166,7 +168,7 @@ static void lora_cs_low(void)
  ******************************************************************************/
 static void lora_cs_high(void)
 {
-	gpio_set_level(LORA_RESETn, DRIVE_HIGH);
+	gpio_set_level(LORA_CSn, DRIVE_HIGH);
 }
 
 
@@ -223,6 +225,7 @@ void lora_io_init(void)
 	gpio_set_direction(LORA_CSn,GPIO_MODE_OUTPUT);
 	gpio_set_direction(LORA_RESETn,GPIO_MODE_OUTPUT);
 	gpio_set_direction(LORA_BUSY,GPIO_MODE_INPUT);
+	gpio_set_pull_mode(LORA_BUSY, GPIO_PULLUP_ONLY);
 	
 	lora_cs_high();
 	lora_reset_low();	
@@ -231,6 +234,92 @@ void lora_io_init(void)
 }
 
 
+/*******************************************************************************
+ * Function name  : lora_spi_write
+ *
+ * Description    : function to write to lora spi register
+ * Parameters     : spi device handler, opcode, data
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Chandrashekhar Venkatesh
+ * date           : 20AUG2024
+ ******************************************************************************/
+void lora_spi_write(spi_device_handle_t spi, const uint8_t opcode, const uint16_t address)
+{
+	esp_err_t ret;
+    spi_transaction_t t;
+    memset(&t, 0, sizeof(t));       //Zero out the transaction
+    t.length=8*2;                 //Len is in bytes, transaction length is in bits.
+    t.addr= opcode;				//opcode 16 bits
+    t.tx_buffer=&address;               //Data
+    ret=spi_device_polling_transmit(spi, &t);  //Transmit!
+    assert(ret==ESP_OK);            //Should have had no issues.
+}
+
+/*******************************************************************************
+ * Function name  : lora_spi_read
+ *
+ * Description    : function to read from lora spi register
+ * Parameters     : spi device handler, opcode, data
+ * Returns        : data
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Chandrashekhar Venkatesh
+ * date           : 20AUG2024
+ ******************************************************************************/
+uint8_t lora_spi_read(spi_device_handle_t spi, const uint8_t opcode, const uint16_t address)
+{
+    esp_err_t ret;
+    spi_transaction_t t;
+    memset(&t, 0, sizeof(t));       //Zero out the transaction
+    t.addr= opcode,
+	t.length=8*3;
+	t.tx_buffer=&address;
+    t.rxlength =8;
+    t.rx_buffer=0;
+    t.flags = SPI_TRANS_USE_RXDATA;
+    ret=spi_device_polling_transmit(spi, &t);  //Transmit!
+    assert(ret==ESP_OK);            //Should have had no issues.
+    return *(uint8_t*)t.rx_data;
+}
+
+/*******************************************************************************
+ * Function name  : lora_read_version_register
+ *
+ * Description    : function to read Lora version register
+ * Parameters     : None
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Chandrashekhar Venkatesh
+ * date           : 20AUG2024
+ ******************************************************************************/
+ void lora_read_version_register(void)
+ {
+	 uint8_t read_data = 0x00;
+	 uint8_t opcode;
+	 uint16_t address;
+	 	 
+	 lora_cs_low();
+//	 sys_delay_ms(1);// chipselect to data 1Msec delay
+	 if(!gpio_get_level(LORA_BUSY))
+	 {
+		 opcode = 0x1D;
+		 address = 0xAC08; //we need to byte swap to match datasheet of Lora 
+		 read_data = lora_spi_read(lora_spi, opcode, address);
+		 ESP_LOGI(tag, "read_data = 0x%x", read_data);
+//		 sys_delay_ms(1);// chipselect to data 1Msec delay
+		 lora_cs_high();	 
+	 }	 
+	 else
+	 {
+		 ESP_LOGI(tag, "Lora BUSY IO is HIGH"); 	
+	 }
+ }
 
 
 

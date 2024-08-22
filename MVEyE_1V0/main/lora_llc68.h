@@ -79,6 +79,7 @@
 void lora_spi_init(void);
 void lora_io_init(void);
 void lora_spi_remove(void);
+ void lora_read_version_register(void);
 
 
 #endif /* MAIN_LORA_LLC68_H_ */

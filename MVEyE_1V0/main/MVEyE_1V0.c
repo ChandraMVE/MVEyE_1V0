@@ -137,6 +137,7 @@ void app_main(void)
     while(1)
     {
 		printf("MVEyE active\n");
+//		lora_read_version_register();
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
 }
