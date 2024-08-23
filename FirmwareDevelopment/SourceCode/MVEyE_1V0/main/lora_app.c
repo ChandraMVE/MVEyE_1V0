@@ -48,8 +48,8 @@
 //==============================================================================
 #define TAG "LORA_APP"
 #define TIMEOUT 100
-#define PING 1
-#define PONG 0
+#define PING 0
+#define PONG 1
 //==============================================================================
 //   __        __   __                          __   __
 //  / _` |    /  \ |__)  /\  |       \  /  /\  |__) /__`
@@ -258,8 +258,8 @@ void LoRaAppInit(void)
 		}
 	}
 	
-	uint8_t spreadingFactor = 7;
-	uint8_t bandwidth = LLCC68_LORA_BW_125_0;
+	uint8_t spreadingFactor = 11;
+	uint8_t bandwidth = LLCC68_LORA_BW_500_0;
 	uint8_t codingRate = LLCC68_LORA_CR_4_5;
 	uint16_t preambleLength = 8;
 	uint8_t payloadLen = 0;
