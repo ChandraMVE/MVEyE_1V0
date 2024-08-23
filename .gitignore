@@ -1,6 +1,8 @@
 #Ignore all build files
 MVEyE_1V0/build
-
+FirmwareDevelopment/SourceCode/MVEyE_1V0/.*
+FirmwareDevelopment/SourceCode/MVEyE_1V0/build
+FirmwareDevelopment/SourceCode/MVEyE_1V0/*.old
 .metadata
 
 MVEyE_1V0/.*
