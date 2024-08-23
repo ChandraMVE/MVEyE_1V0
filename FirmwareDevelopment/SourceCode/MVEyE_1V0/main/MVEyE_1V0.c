@@ -36,6 +36,7 @@
 //==============================================================================
 #include <stdio.h>
 #include <inttypes.h>
+#include "esp_log.h"
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -45,6 +46,7 @@
 #include "leds.h"
 #include "soc/gpio_periph.h"
 #include "lora_llc68.h"
+#include "lora_app.h"
 
 //==============================================================================
 //   __   ___  ___         ___  __
@@ -52,7 +54,7 @@
 //  |__/ |___ |    | | \| |___ .__/
 //
 //==============================================================================
-
+#define TAG "MVEyE_1V0"
 //==============================================================================
 //   __        __   __                          __   __
 //  / _` |    /  \ |__)  /\  |       \  /  /\  |__) /__`
@@ -128,15 +130,16 @@ void get_esp32_version(void)
  ******************************************************************************/
 void app_main(void)
 {
+	vTaskDelay(5000 / portTICK_PERIOD_MS); //Wait for proper debug messages to see.
     get_esp32_version();
     init_leds();
     create_leds_task();
-    lora_spi_init();
-    lora_io_init();
+    LoRaAppInit();
+    create_lora_task();
 
     while(1)
     {
-		printf("MVEyE active\n");
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		ESP_LOGD(TAG,"MVEyE active");
+		vTaskDelay(1000 / portTICK_PERIOD_MS);		
 	}
 }
