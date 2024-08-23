@@ -82,9 +82,9 @@ static void leds_task(void *pvParameters)
 {
 	while(1)
 	{
-		gpio_set_level(GREEN_LED, (uint32_t)state_led);
-		gpio_set_level(BLUE_LED, (uint32_t)state_led);
-		gpio_set_level(RED_LED, (uint32_t)state_led);
+//		gpio_set_level(GREEN_LED, (uint32_t)state_led);
+//		gpio_set_level(BLUE_LED, (uint32_t)state_led);
+//		gpio_set_level(RED_LED, (uint32_t)state_led);
 		vTaskDelay(250 / portTICK_PERIOD_MS);
 		state_led = !state_led;
 	}

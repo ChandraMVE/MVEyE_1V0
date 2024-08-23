@@ -37,6 +37,7 @@
 //
 //==============================================================================
 #include "driver/spi_master.h"
+#include "leds.h"
 
 //==============================================================================
 //   __   ___  ___         ___  __
@@ -150,7 +151,7 @@
 #define LLCC68_REG_FREQ15                             0x03E4
 #define LLCC68_REG_DIOX_OUTPUT_ENABLE                 0x0580
 #define LLCC68_REG_DIOX_INPUT_ENABLE                  0x0583
-#define LLCC68_REG_DIOX_PILL_UP_CONTROL               0x0584
+#define LLCC68_REG_DIOX_PULL_UP_CONTROL               0x0584
 #define LLCC68_REG_DIOX_PULL_DOWN_CONTROL             0x0585
 #define LLCC68_REG_WHITENING_INITIAL_MSB              0x06B8
 #define LLCC68_REG_WHITENING_INITIAL_LSB              0x06B9
@@ -429,8 +430,8 @@
 #define CONFIG_NSS_GPIO		LORA_CSn
 #define CONFIG_RST_GPIO		LORA_RESETn		
 #define CONFIG_BUSY_GPIO	LORA_BUSY	
-#define CONFIG_TXEN_GPIO	LORA_DIO2
-#define CONFIG_RXEN_GPIO	LORA_DIO2
+#define CONFIG_TXEN_GPIO	GREEN_LED
+#define CONFIG_RXEN_GPIO	BLUE_LED
 
 #define	LLCC68_SPI_SELECT 	CONFIG_NSS_GPIO
 #define	LLCC68_RESET		CONFIG_RST_GPIO

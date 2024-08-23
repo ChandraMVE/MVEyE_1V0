@@ -122,6 +122,10 @@ __attribute__ ((weak, alias ("LoRaErrorDefault"))) void LoRaError(int error);
 	ESP_LOGI(TAG, "CONFIG_BUSY_GPIO=%d", CONFIG_BUSY_GPIO);
 	ESP_LOGI(TAG, "CONFIG_TXEN_GPIO=%d", CONFIG_TXEN_GPIO);
 	ESP_LOGI(TAG, "CONFIG_RXEN_GPIO=%d", CONFIG_RXEN_GPIO);
+	ESP_LOGI(TAG, "LORA_DIO1=%d",LORA_DIO1);
+	ESP_LOGI(TAG, "LORA_DIO2=%d",LORA_DIO2);
+	ESP_LOGI(TAG, "LORA_DIO3=%d",LORA_DIO3);
+
 
 	txActive = false;
 	debugPrint = false;
@@ -131,9 +135,15 @@ __attribute__ ((weak, alias ("LoRaErrorDefault"))) void LoRaError(int error);
 
 	gpio_set_direction(CONFIG_TXEN_GPIO,GPIO_MODE_OUTPUT);
 	gpio_set_direction(CONFIG_RXEN_GPIO,GPIO_MODE_OUTPUT);
-	
+	gpio_set_pull_mode(CONFIG_TXEN_GPIO, GPIO_PULLUP_ONLY);
+	gpio_set_pull_mode(CONFIG_RXEN_GPIO, GPIO_PULLUP_ONLY);
+
 	gpio_set_direction(CONFIG_BUSY_GPIO,GPIO_MODE_INPUT);
 	gpio_set_pull_mode(CONFIG_BUSY_GPIO, GPIO_PULLUP_ONLY);
+	
+	gpio_set_direction(LORA_DIO1,GPIO_MODE_INPUT);
+	gpio_set_direction(LORA_DIO2,GPIO_MODE_INPUT);
+	gpio_set_direction(LORA_DIO3,GPIO_MODE_INPUT);
 	
 	spi_bus_config_t spi_bus_config = {
 		.sclk_io_num = CONFIG_SCLK_GPIO,
@@ -274,9 +284,7 @@ uint8_t spi_transfer(uint8_t address)
 
 	ESP_LOGI(TAG, "LLCC68 installed");
 	SetStandby(LLCC68_STANDBY_RC);
-#if 0
 	SetDio2AsRfSwitchCtrl(true);
-#endif
 	ESP_LOGI(TAG, "tcxoVoltage=%f", tcxoVoltage);
 	// set TCXO control, if requested
 	if(tcxoVoltage > 0.0) {
@@ -362,7 +370,7 @@ void LoRaConfig(uint8_t spreadingFactor, uint8_t bandwidth, uint8_t codingRate, 
 	SetStopRxTimerOnPreambleDetect(false);
 	SetLoRaSymbNumTimeout(0); 
 	SetPacketType(LLCC68_PACKET_TYPE_LORA); // LLCC68.ModulationParams.PacketType : MODEM_LORA
-	uint8_t ldro = 0; // LowDataRateOptimize OFF
+	uint8_t ldro = LLCC68_LORA_LOW_DATA_RATE_OPTIMIZE_OFF; // LowDataRateOptimize OFF
 	SetModulationParams(spreadingFactor, bandwidth, codingRate, ldro);
 	
 	PacketParams[0] = (preambleLength >> 8) & 0xFF;
@@ -1191,8 +1199,8 @@ void SetRx(uint32_t timeout)
 		ESP_LOGI(TAG, "SetRxEnable:SX126x_TXEN=%d SX126x_RXEN=%d", LLCC68_TXEN, LLCC68_RXEN);
 	}
 	if ((LLCC68_TXEN != -1) && (LLCC68_RXEN != -1)) {
-//		gpio_set_level(LLCC68_RXEN, HIGH);
-		gpio_set_level(LLCC68_TXEN, LOW);
+		gpio_set_level(LLCC68_RXEN, LOW); // Will turn on Blue LED
+		gpio_set_level(LLCC68_TXEN, HIGH); // Will turn off Green LED
 	}
 }
 
@@ -1257,8 +1265,8 @@ void SetRx(uint32_t timeout)
 		ESP_LOGI(TAG, "SetTxEnable:SX126x_TXEN=%d SX126x_RXEN=%d", LLCC68_TXEN, LLCC68_RXEN);
 	}
 	if ((LLCC68_TXEN != -1) && (LLCC68_RXEN != -1)){
-//		gpio_set_level(LLCC68_RXEN, LOW);
-		gpio_set_level(LLCC68_TXEN, HIGH);
+		gpio_set_level(LLCC68_RXEN, HIGH); // Will turn off Blue LED
+		gpio_set_level(LLCC68_TXEN, LOW); // Will turn on Green LED
 	}
 }
 

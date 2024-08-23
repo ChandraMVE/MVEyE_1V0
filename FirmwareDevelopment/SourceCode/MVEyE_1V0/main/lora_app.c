@@ -48,8 +48,8 @@
 //==============================================================================
 #define TAG "LORA_APP"
 #define TIMEOUT 100
-#define PING 0
-#define PONG 1
+#define PING 1
+#define PONG 0
 //==============================================================================
 //   __        __   __                          __   __
 //  / _` |    /  \ |__)  /\  |       \  /  /\  |__) /__`
@@ -225,6 +225,9 @@ void LoRaAppInit(void)
 #elif CONFIG_866MHZ
 	frequencyInHz = 866000000;
 	ESP_LOGI(TAG, "Frequency is 866MHz");
+#elif CONFIG_868MHZ
+	frequencyInHz = 868130000;
+	ESP_LOGI(TAG, "Frequency is 868MHz");
 #elif CONFIG_915MHZ
 	frequencyInHz = 915000000;
 	ESP_LOGI(TAG, "Frequency is 915MHz");
@@ -256,8 +259,8 @@ void LoRaAppInit(void)
 	}
 	
 	uint8_t spreadingFactor = 7;
-	uint8_t bandwidth = 4;
-	uint8_t codingRate = 1;
+	uint8_t bandwidth = LLCC68_LORA_BW_125_0;
+	uint8_t codingRate = LLCC68_LORA_CR_4_5;
 	uint16_t preambleLength = 8;
 	uint8_t payloadLen = 0;
 	bool crcOn = true;

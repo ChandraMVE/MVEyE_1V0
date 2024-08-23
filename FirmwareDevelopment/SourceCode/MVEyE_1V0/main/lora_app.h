@@ -44,7 +44,7 @@
 //  |__/ |___ |    | | \| |___ .__/
 //
 //==============================================================================
-#define CONFIG_866MHZ 	1
+#define CONFIG_868MHZ	1
 #define CONFIG_USE_TCXO	0
 #define CONFIF_ADVANCED 0
 #define CONFIG_SF_RATE	7
