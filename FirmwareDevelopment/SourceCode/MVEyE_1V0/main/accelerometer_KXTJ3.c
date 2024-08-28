@@ -159,7 +159,8 @@ const uint8_t _ACCEL7_DATA_CTRL_REG_ODR_200Hz     = 0x04;  //4th bit = 0, 3rd bi
 const uint8_t _ACCEL7_DATA_CTRL_REG_ODR_400Hz     = 0x05;  //4th bit = 0, 3rd bit = 1, 2nd bit = 0, 1st bit = 1, sets the 400 Hz output data rate (ODR) for the low-pass filtered
 const uint8_t _ACCEL7_DATA_CTRL_REG_ODR_800Hz     = 0x06;  //4th bit = 0, 3rd bit = 1, 2nd bit = 1, 1st bit = 0, sets the 800 Hz output data rate (ODR) for the low-pass filtered
 const uint8_t _ACCEL7_DATA_CTRL_REG_ODR_1600Hz    = 0x07;  //4th bit = 0, 3rd bit = 1, 2nd bit = 1, 1st bit = 1, sets the 1600 Hz output data rate (ODR) for the low-pass filtered
-extern i2c_master_dev_handle_t dev_handle;
+
+i2c_master_dev_handle_t dev_handle;
 //==============================================================================
 //   __  ___      ___    __                __   __
 //  /__`  |   /\   |  | /  `    \  /  /\  |__) /__`
@@ -228,7 +229,7 @@ void accel7_i2cDriverInit()
         .scl_io_num = I2C_SCL,
         .sda_io_num = I2C_SDA,
         .glitch_ignore_cnt = 7,
-        //.flags.enable_internal_pullup = true,
+        .flags.enable_internal_pullup = true,
     };
     i2c_master_bus_handle_t bus_handle;
      // Create and initialize the I2C bus
@@ -240,7 +241,7 @@ void accel7_i2cDriverInit()
     	.scl_speed_hz = 100000,
 	};
 
-	i2c_master_dev_handle_t dev_handle;
+	
 	// Add I2C device to the bus
 	ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &dev_cfg, &dev_handle));
     

@@ -40,6 +40,7 @@
 #include "lora_app.h"
 #include "lora_llc68.h"
 #include <ctype.h>
+#include "accelerometer_KXTJ3.h"
 //==============================================================================
 //   __   ___  ___         ___  __
 //  |  \ |__  |__  | |\ | |__  /__`
@@ -80,7 +81,13 @@
  	ESP_LOGI(pcTaskGetName(NULL), "Start");
  	uint8_t txData[256]; // Maximum Payload size of SX1261/62/68 is 255
 	uint8_t rxData[256]; // Maximum Payload size of SX1261/62/68 is 255
+	
+	uint8_t I_AM;    
+    
 	while(1) {
+		
+		I_AM = accel7_readByte(_ACCEL7_REG_WHO_AM_I);
+		ESP_LOGI("APP", "Who Am I register value: 0x%02X",I_AM);
 		TickType_t nowTick = xTaskGetTickCount();
 		int txLen = sprintf((char *)txData, "Hello World %"PRIu32, nowTick);
 		//uint8_t len = strlen((char *)txData);

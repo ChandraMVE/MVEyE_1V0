@@ -47,7 +47,8 @@
 #include "soc/gpio_periph.h"
 #include "lora_llc68.h"
 #include "lora_app.h"
-
+#include "driver/i2c.h"
+#include "accelerometer_KXTJ3.h"
 //==============================================================================
 //   __   ___  ___         ___  __
 //  |  \ |__  |__  | |\ | |__  /__`
@@ -116,6 +117,8 @@ void get_esp32_version(void)
 #endif
 }
 
+
+
 /*******************************************************************************
  * Function name  : app_main
  *
@@ -131,6 +134,7 @@ void get_esp32_version(void)
 void app_main(void)
 {
 	vTaskDelay(5000 / portTICK_PERIOD_MS); //Wait for proper debug messages to see.
+    accel7_i2cDriverInit();
     get_esp32_version();
     init_leds();
     create_leds_task();

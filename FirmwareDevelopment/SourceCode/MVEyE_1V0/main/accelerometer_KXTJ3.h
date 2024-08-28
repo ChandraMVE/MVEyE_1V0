@@ -31,13 +31,14 @@
 #ifndef MAIN_ACCELEROMETER_KXTJ3_H_
 #define MAIN_ACCELEROMETER_KXTJ3_H_
 #include "stdint.h"
+#include "driver/i2c_master.h"
 //==============================================================================
 //          __             __   ___  __
 //  | |\ | /  ` |    |  | |  \ |__  /__`
 //  | | \| \__, |___ \__/ |__/ |___ .__/
 //
 //==============================================================================
-
+extern i2c_master_dev_handle_t dev_handle;
 //==============================================================================
 //   __   ___  ___         ___  __
 //  |  \ |__  |__  | |\ | |__  /__`
@@ -45,18 +46,11 @@
 //
 //==============================================================================
 #define PortNum     0
-#define I2C_SDA 	GPIO_NUM_25
-#define I2C_SCL		GPIO_NUM_26	
-#define ACC_INTn	GPIO_NUM_6
+#define I2C_SDA 	GPIO_NUM_0
+#define I2C_SCL		GPIO_NUM_4	
+#define ACC_INTn	GPIO_NUM_34
 #define ADDR_KXTJ3_7BIT	0x0F
-
-
-#define T_ACCEL7_P    const uint8_t*
-#define T_HAL_P         const uint8_t*      
-
-                                 
-#define   __INT_PIN_INPUT__         7
-
+                         
 //==============================================================================
 //  ___      __   ___  __   ___  ___  __
 //   |  \ / |__) |__  |  \ |__  |__  /__`
@@ -196,7 +190,6 @@ extern const uint8_t _ACCEL7_RANGE_16g;
  */
 void accel7_i2cDriverInit();                     
 
-void accel7_gpioDriverInit(T_ACCEL7_P gpioObj);
 /**
  * @brief Functions for write one byte in register
  *
