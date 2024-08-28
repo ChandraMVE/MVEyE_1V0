@@ -41,6 +41,7 @@
 #include "lora_llc68.h"
 #include <ctype.h>
 #include "accelerometer_KXTJ3.h"
+#include "esp_err.h"
 //==============================================================================
 //   __   ___  ___         ___  __
 //  |  \ |__  |__  | |\ | |__  /__`
@@ -83,12 +84,25 @@
 	uint8_t rxData[256]; // Maximum Payload size of SX1261/62/68 is 255
 	
 	uint8_t I_AM;    
+    int16_t x, y, z;
+    // Initialize KXTJ3-1057
+    if (accel7_init(_ACCEL7_DATA_RESP_12bit, _ACCEL7_RANGE_2g) != 0) {
+        ESP_LOGE(TAG, "KXTJ3-1057 initialization failed");
+        return;
+    }
     
 	while(1) {
 		
 		I_AM = accel7_readByte(_ACCEL7_REG_WHO_AM_I);
 		ESP_LOGI("APP", "Who Am I register value: 0x%02X",I_AM);
-		TickType_t nowTick = xTaskGetTickCount();
+		// Read accelerometer data
+    	x = accel7_getAxis(_ACCEL7_AXIS_X);
+   	 	y = accel7_getAxis(_ACCEL7_AXIS_Y);
+    	z = accel7_getAxis(_ACCEL7_AXIS_Z);
+
+    	ESP_LOGI(TAG, "Accelerometer readings: X=%d, Y=%d, Z=%d", x, y, z);
+		
+		/*TickType_t nowTick = xTaskGetTickCount();
 		int txLen = sprintf((char *)txData, "Hello World %"PRIu32, nowTick);
 		//uint8_t len = strlen((char *)txData);
 
@@ -118,7 +132,7 @@
 
 		} else {
 			ESP_LOGE(pcTaskGetName(NULL), "Send fail");
-		}
+		}*/
 
 		vTaskDelay(pdMS_TO_TICKS(1000));
 	} // end while 
