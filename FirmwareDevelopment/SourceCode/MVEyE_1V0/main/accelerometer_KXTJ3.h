@@ -45,6 +45,7 @@ extern i2c_master_dev_handle_t dev_handle;
 //  |__/ |___ |    | | \| |___ .__/
 //
 //==============================================================================
+#define TAG "accelerometer_KXTJ3"
 #define PortNum     0
 #define I2C_SDA 	GPIO_NUM_0
 #define I2C_SCL		GPIO_NUM_4	
@@ -235,7 +236,7 @@ uint8_t accel7_init(uint8_t dataRes, uint8_t range);
 uint8_t accel7_getInterruptState(uint8_t pin);
 
 
-
+void create_Accelerometer_task(void);
 
 
 

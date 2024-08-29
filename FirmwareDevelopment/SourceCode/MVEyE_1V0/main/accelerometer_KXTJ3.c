@@ -40,6 +40,11 @@
 #include "hal/i2c_hal.h"
 #include "hal/gpio_hal.h"
 #include "driver/gpio.h"
+#include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include <ctype.h>
+#include "esp_err.h"
 //==============================================================================
 //   __   ___  ___         ___  __
 //  |  \ |__  |__  | |\ | |__  /__`
@@ -470,6 +475,61 @@ uint8_t accel7_getInterruptState(uint8_t pin)
 }
 
 
+/*******************************************************************************
+ * Function name  : Acc_data
+ *
+ * Description    : Acceleration_data function task
+ * Parameters     : None
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Chandrashekhar Venkatesh
+ * date           : 20AUG2024
+ ******************************************************************************/
+ static void Accelerometer_Task (void *pvParameters)
+ {
+ 	ESP_LOGI(pcTaskGetName(NULL), "Start");
+
+	uint8_t I_AM;    
+    int16_t x, y, z;
+    // Initialize KXTJ3-1057
+    if (accel7_init(_ACCEL7_DATA_RESP_12bit, _ACCEL7_RANGE_2g) != 0) {
+        ESP_LOGE(TAG, "KXTJ3-1057 initialization failed");
+        return;
+    }
+	while(1) {
+		
+		I_AM = accel7_readByte(_ACCEL7_REG_WHO_AM_I);
+		ESP_LOGI("APP", "Who Am I register value: 0x%02X",I_AM);
+		// Read accelerometer data
+    	x = accel7_getAxis(_ACCEL7_AXIS_X);
+   	 	y = accel7_getAxis(_ACCEL7_AXIS_Y);
+    	z = accel7_getAxis(_ACCEL7_AXIS_Z);
+
+    	ESP_LOGI(TAG, "Accelerometer readings: X=%d, Y=%d, Z=%d", x, y, z);
+		
+		vTaskDelay(pdMS_TO_TICKS(1000));
+	} // end while 
+ }
+
+/*******************************************************************************
+ * Function name  : create_Accelerometer_task
+ *
+ * Description    : function to create Acceleration_data tasks
+ * Parameters     : None
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Chandrashekhar Venkatesh
+ * date           : 20AUG2024
+ ******************************************************************************/
+void create_Accelerometer_task(void)
+{
+    xTaskCreate(Accelerometer_Task, "Accelerometer_Task", 1024*8, NULL, 1, NULL);
+
+}
 
 
 
