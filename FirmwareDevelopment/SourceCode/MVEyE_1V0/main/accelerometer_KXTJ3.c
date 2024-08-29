@@ -51,8 +51,32 @@
 //  |__/ |___ |    | | \| |___ .__/
 //
 //==============================================================================
+// Sensitivity factors for different full-scale ranges
+// These should be defined based on your accelerometer's datasheet
+#define SENSITIVITY_FACTOR_2G_8BIT 0.016f
+#define SENSITIVITY_FACTOR_4G_8BIT 0.031f
+#define SENSITIVITY_FACTOR_8G_8BIT 0.0625f
+#define SENSITIVITY_FACTOR_16G_8BIT 0.125f
+
+#define SENSITIVITY_FACTOR_2G_12BIT 0.001f
+#define SENSITIVITY_FACTOR_4G_12BIT 0.002f
+#define SENSITIVITY_FACTOR_8G_12BIT 0.0039f
+#define SENSITIVITY_FACTOR_16G_12BIT 0.0078f
+
+#define SENSITIVITY_FACTOR_8G_14BIT 0.00098f
+#define SENSITIVITY_FACTOR_16G_14BIT 0.00195f
+
+// Sensitivity factors array based on the full-scale range and resolution
+// Indexed by [range][resolution]
+float sensitivityFactors[4][3] = {
+    { SENSITIVITY_FACTOR_2G_8BIT, SENSITIVITY_FACTOR_2G_12BIT, 0.0f }, // Assuming full-scale range 2G
+    { SENSITIVITY_FACTOR_4G_8BIT, SENSITIVITY_FACTOR_4G_12BIT, 0.0f }, // Assuming full-scale range 4G
+    { SENSITIVITY_FACTOR_8G_8BIT, SENSITIVITY_FACTOR_8G_12BIT, SENSITIVITY_FACTOR_8G_14BIT }, // Assuming full-scale range 8G
+    { SENSITIVITY_FACTOR_16G_8BIT, SENSITIVITY_FACTOR_16G_12BIT, SENSITIVITY_FACTOR_16G_14BIT } // Assuming full-scale range 16G
+};
 
 
+uint8_t _fullScaleRange = 0; // This should be set according to your sensor configuration
 //==============================================================================
 //   __        __   __                          __   __
 //  / _` |    /  \ |__)  /\  |       \  /  /\  |__) /__`
@@ -322,11 +346,12 @@ uint8_t accel7_readByte(uint8_t reg)
  * date           : 20AUG2024
  ******************************************************************************/
 
-int16_t accel7_getAxis(uint8_t _axis)
+float accel7_getAxis(uint8_t _axis)
 {
     uint8_t writeReg[ 1 ];
     
     int16_t AxisData;
+    float Data;
     
     
     writeReg[ 0 ] = _axis;
@@ -352,8 +377,32 @@ int16_t accel7_getAxis(uint8_t _axis)
     {
         AxisData = (AxisData >> 8);
     }
+    
+    // Convert AxisData to a floating-point value using sensitivity factor
+    // Sensitivity factor is selected based on full-scale range and resolution
+    int resolutionIndex;
+    switch (_dataResolution)
+    {
+        case _ACCEL7_DATA_RESP_8bit:
+            resolutionIndex = 0;
+            break;
+        case _ACCEL7_DATA_RESP_12bit:
+            resolutionIndex = 1;
+            break;
+        case _ACCEL7_DATA_RESP_14bit:
+            resolutionIndex = 2;
+            break;
+        default:
+            // Handle unexpected resolution
+            return 0.0f;
+    }
 
-    return AxisData;
+    Data = (float)AxisData * sensitivityFactors[_fullScaleRange][resolutionIndex];
+
+    return Data;
+    
+
+    return Data;
 }
 
 /*******************************************************************************
@@ -492,9 +541,9 @@ uint8_t accel7_getInterruptState(uint8_t pin)
  	ESP_LOGI(pcTaskGetName(NULL), "Start");
 
 	uint8_t I_AM;    
-    int16_t x, y, z;
+    float x, y, z;
     // Initialize KXTJ3-1057
-    if (accel7_init(_ACCEL7_DATA_RESP_12bit, _ACCEL7_RANGE_2g) != 0) {
+    if (accel7_init(_ACCEL7_DATA_RESP_8bit, _ACCEL7_RANGE_16g) != 0) {
         ESP_LOGE(TAG, "KXTJ3-1057 initialization failed");
         return;
     }
@@ -503,11 +552,11 @@ uint8_t accel7_getInterruptState(uint8_t pin)
 		I_AM = accel7_readByte(_ACCEL7_REG_WHO_AM_I);
 		ESP_LOGI("APP", "Who Am I register value: 0x%02X",I_AM);
 		// Read accelerometer data
-    	x = accel7_getAxis(_ACCEL7_AXIS_X);
-   	 	y = accel7_getAxis(_ACCEL7_AXIS_Y);
-    	z = accel7_getAxis(_ACCEL7_AXIS_Z);
+    	x =  accel7_getAxis(_ACCEL7_AXIS_X);
+   	 	y =  accel7_getAxis(_ACCEL7_AXIS_Y);
+    	z =  accel7_getAxis(_ACCEL7_AXIS_Z);
 
-    	ESP_LOGI(TAG, "Accelerometer readings: X=%d, Y=%d, Z=%d", x, y, z);
+    	ESP_LOGI(TAG, "Accelerometer readings: X=%f, Y=%f, Z=%f", x, y, z);
 		
 		vTaskDelay(pdMS_TO_TICKS(1000));
 	} // end while 

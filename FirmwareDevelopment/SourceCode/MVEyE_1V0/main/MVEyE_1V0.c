@@ -134,7 +134,6 @@ void get_esp32_version(void)
 void app_main(void)
 {
 	vTaskDelay(5000 / portTICK_PERIOD_MS); //Wait for proper debug messages to see.
-    
     get_esp32_version();
     init_leds();
     create_leds_task();

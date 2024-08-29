@@ -174,6 +174,8 @@ extern const uint8_t _ACCEL7_RANGE_4g;
 extern const uint8_t _ACCEL7_RANGE_8g;
 extern const uint8_t _ACCEL7_RANGE_16g;
 
+
+
 //==============================================================================
 //   __        __          __      ___            __  ___    __        __
 //  |__) |  | |__) |    | /  `    |__  |  | |\ | /  `  |  | /  \ |\ | /__`
@@ -189,7 +191,7 @@ extern const uint8_t _ACCEL7_RANGE_16g;
  *
  * @return None
  */
-void accel7_i2cDriverInit();                     
+void accel7_i2cDriverInit(void);                     
 
 /**
  * @brief Functions for write one byte in register
@@ -213,7 +215,7 @@ uint8_t accel7_readByte(uint8_t reg);
  * @param[ in ] axis    Axis data which will be read
  * @retval Axis data
  */
-int16_t accel7_getAxis(uint8_t _axis);
+float accel7_getAxis(uint8_t _axis);
 
 /**
  * @brief Functions for initialize the chip
@@ -235,16 +237,14 @@ uint8_t accel7_init(uint8_t dataRes, uint8_t range);
  */
 uint8_t accel7_getInterruptState(uint8_t pin);
 
-
+/**
+ * @brief Functions for create Accelerometer_task state
+ *
+ * @param[in] None
+ *
+ * @return None
+ */
 void create_Accelerometer_task(void);
-
-
-
-
-
-
-                                                                   
-
 
 
 
