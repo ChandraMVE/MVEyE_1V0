@@ -263,14 +263,14 @@ void accel7_i2cDriverInit()
     i2c_master_bus_handle_t bus_handle;
      // Create and initialize the I2C bus
     ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_config, &bus_handle));
+    
     // Configure I2C device
 	i2c_device_config_t dev_cfg = {
     	.dev_addr_length = I2C_ADDR_BIT_LEN_7,
     	.device_address = ADDR_KXTJ3_7BIT,
     	.scl_speed_hz = 100000,
 	};
-
-	
+		
 	// Add I2C device to the bus
 	ESP_ERROR_CHECK(i2c_master_bus_add_device(bus_handle, &dev_cfg, &dev_handle));
     
@@ -523,62 +523,6 @@ uint8_t accel7_getInterruptState(uint8_t pin)
     return gpio_get_level(pin);
 }
 
-
-/*******************************************************************************
- * Function name  : Acc_data
- *
- * Description    : Acceleration_data function task
- * Parameters     : None
- * Returns        : None
- *
- * Known Issues   :
- * Note           :
- * author         : Chandrashekhar Venkatesh
- * date           : 20AUG2024
- ******************************************************************************/
- static void Accelerometer_Task (void *pvParameters)
- {
- 	ESP_LOGI(pcTaskGetName(NULL), "Start");
-
-	uint8_t I_AM;    
-    float x, y, z;
-    // Initialize KXTJ3-1057
-    if (accel7_init(_ACCEL7_DATA_RESP_8bit, _ACCEL7_RANGE_16g) != 0) {
-        ESP_LOGE(TAG, "KXTJ3-1057 initialization failed");
-        return;
-    }
-	while(1) {
-		
-		I_AM = accel7_readByte(_ACCEL7_REG_WHO_AM_I);
-		ESP_LOGI("APP", "Who Am I register value: 0x%02X",I_AM);
-		// Read accelerometer data
-    	x =  accel7_getAxis(_ACCEL7_AXIS_X);
-   	 	y =  accel7_getAxis(_ACCEL7_AXIS_Y);
-    	z =  accel7_getAxis(_ACCEL7_AXIS_Z);
-
-    	ESP_LOGI(TAG, "Accelerometer readings: X=%f, Y=%f, Z=%f", x, y, z);
-		
-		vTaskDelay(pdMS_TO_TICKS(1000));
-	} // end while 
- }
-
-/*******************************************************************************
- * Function name  : create_Accelerometer_task
- *
- * Description    : function to create Acceleration_data tasks
- * Parameters     : None
- * Returns        : None
- *
- * Known Issues   :
- * Note           :
- * author         : Chandrashekhar Venkatesh
- * date           : 20AUG2024
- ******************************************************************************/
-void create_Accelerometer_task(void)
-{
-    xTaskCreate(Accelerometer_Task, "Accelerometer_Task", 1024*8, NULL, 1, NULL);
-
-}
 
 
 

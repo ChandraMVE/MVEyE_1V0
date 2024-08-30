@@ -48,6 +48,7 @@
 #include "lora_llc68.h"
 #include "lora_app.h"
 #include "driver/i2c.h"
+#include "Accelerometer_app.h"
 #include "accelerometer_KXTJ3.h"
 //==============================================================================
 //   __   ___  ___         ___  __
