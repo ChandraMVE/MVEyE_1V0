@@ -20,6 +20,9 @@
 #include "lora_app.h"
 #include "leds.h"
 
+#include "Accelerometer_app.h"
+#include "accelerometer_KXTJ3.h"
+
 char mqtt_message[256];
 
 static const char *TAG = "mqtt5_example";
@@ -294,8 +297,12 @@ void app_main(void)
 
     init_leds();
     create_leds_task();
+    
+    accel7_i2cDriverInit();
+    create_Accelerometer_task();
+    
     LoRaAppInit();
     create_lora_task();
-    ESP_LOGI(pcTaskGetName(NULL), "mqtt_message %s",mqtt_message);
+    
     mqtt5_app_start();
 }
