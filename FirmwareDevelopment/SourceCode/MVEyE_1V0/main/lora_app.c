@@ -57,6 +57,16 @@
 //
 //==============================================================================
 extern char mqtt_message[256];
+
+union acceleration_union
+{
+	float	acceleration[3];
+	uint8_t	acceleration_buff[12]; 
+};
+
+union acceleration_union tx,rx;
+
+float acceleration_reading[3];
 //==============================================================================
 //   __  ___      ___    __                __   __
 //  /__`  |   /\   |  | /  `    \  /  /\  |__) /__`
@@ -81,12 +91,17 @@ extern char mqtt_message[256];
  	uint8_t txData[256]; // Maximum Payload size of SX1261/62/68 is 255
 	uint8_t rxData[256]; // Maximum Payload size of SX1261/62/68 is 255
 	while(1) {
-		TickType_t nowTick = xTaskGetTickCount();
-		int txLen = sprintf((char *)txData, "Hello World %"PRIu32, nowTick);
+		//TickType_t nowTick = xTaskGetTickCount();
+		//int txLen = sprintf((char *)txData, "Hello World %"PRIu32, nowTick);
 		//uint8_t len = strlen((char *)txData);
 
+		for(int i=0; i < 3; i++){
+			
+			tx.acceleration[i] = acceleration_reading[i];
+		}
+
 		// Wait for transmission to complete
-		if (LoRaSend(txData, txLen, LLCC68_TXMODE_SYNC)) {
+		if (LoRaSend(tx.acceleration_buff, sizeof(acceleration_reading), LLCC68_TXMODE_SYNC)) {
 			//ESP_LOGI(pcTaskGetName(NULL), "Send success");
 
 			bool waiting = true;
@@ -94,12 +109,14 @@ extern char mqtt_message[256];
 			while(waiting) {
 				uint8_t rxLen = LoRaReceive(rxData, sizeof(rxData));
 					
-			for (int i = 0; i < rxLen; i++) 
+			for (int i = 0; i < 12; i++) 
 			{
-        		mqtt_message[i] = (char)rxData[i];
+        		rx.acceleration_buff[i] = rxData[i];
     		}
-    			mqtt_message[rxLen] = '\0';
-    			ESP_LOGI(pcTaskGetName(NULL), "mqtt_message %s",mqtt_message);
+    		
+    			//mqtt_message[rxLen] = '\0';
+    			ESP_LOGI(pcTaskGetName(NULL), "acceleration data received from LoRa X = %f, Y = %f, Z = %f",
+    			rx.acceleration[0], rx.acceleration[1], rx.acceleration[2]);
     			
 				TickType_t currentTick = xTaskGetTickCount();
 				TickType_t diffTick = currentTick - startTick;
@@ -144,12 +161,17 @@ extern char mqtt_message[256];
 	while(1) {
 		uint8_t rxLen = LoRaReceive(rxData, sizeof(rxData));
 		
-		for (int i = 0; i < rxLen; i++) 
-		{
-        	mqtt_message[i] = (char)rxData[i];
-    	}
-    		mqtt_message[rxLen] = '\0';
+			for (int i = 0; i < 12; i++) 
+			{
+        		rx.acceleration_buff[i] = rxData[i];
+    		}
+    		
+    	//mqtt_message[rxLen] = '\0';
+    	ESP_LOGI(pcTaskGetName(NULL), "acceleration data received from LoRa X = %f, Y = %f, Z = %f",
+					rx.acceleration[0], rx.acceleration[1], rx.acceleration[2] );
     			
+    	// ESP_LOGI(pcTaskGetName(NULL), "mqtt_message %s",mqtt_message);
+    	
 		if ( rxLen > 0 ) { 
 			printf("Receive rxLen:%d\n", rxLen);
 			for(int i=0;i< rxLen;i++) {
@@ -178,9 +200,14 @@ extern char mqtt_message[256];
 					txData[i] = toupper(rxData[i]);
 				}
 			}
-
+			
+			for(int i=0; i < 3; i++){
+			
+				tx.acceleration[i] = acceleration_reading[i];
+			}
+			
 			// Wait for transmission to complete
-			if (LoRaSend(txData, rxLen, LLCC68_TXMODE_SYNC)) {
+			if (LoRaSend(tx.acceleration_buff, sizeof(acceleration_reading), LLCC68_TXMODE_SYNC)) {
 				ESP_LOGD(pcTaskGetName(NULL), "Send success");
 			} else {
 				ESP_LOGE(pcTaskGetName(NULL), "LoRaSend fail");
