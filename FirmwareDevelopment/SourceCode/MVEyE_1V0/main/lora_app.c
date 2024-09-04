@@ -56,7 +56,7 @@
 //  \__> |___ \__/ |__) /~~\ |___     \/  /~~\ |  \ .__/
 //
 //==============================================================================
-
+char myChar;
 //==============================================================================
 //   __  ___      ___    __                __   __
 //  /__`  |   /\   |  | /  `    \  /  /\  |__) /__`
@@ -93,6 +93,13 @@
 			TickType_t startTick = xTaskGetTickCount();
 			while(waiting) {
 				uint8_t rxLen = LoRaReceive(rxData, sizeof(rxData));
+				
+				for(int i=0;i< rxLen;i++) 
+				{
+					myChar = rxData[i];
+				}
+					rx_mqtt_data = myChar;
+					
 				TickType_t currentTick = xTaskGetTickCount();
 				TickType_t diffTick = currentTick - startTick;
 				if ( rxLen > 0 ) {
@@ -130,6 +137,7 @@
  ******************************************************************************/
  void task_pong (void *pvParameters)
  {
+	 
 	 ESP_LOGI(pcTaskGetName(NULL), "Start");
 	uint8_t txData[256]; // Maximum Payload size of SX1261/62/68 is 255
 	uint8_t rxData[256]; // Maximum Payload size of SX1261/62/68 is 255
@@ -141,17 +149,19 @@
 				printf("%02x ",rxData[i]);
 			}
 			printf("\n");
-
+		
 			for(int i=0;i< rxLen;i++) {
 				if (rxData[i] > 0x19 && rxData[i] < 0x7F) {
-					char myChar = rxData[i];
+					myChar = rxData[i];
 					printf("%c", myChar);
 				} else {
 					printf("?");
 				}
 			}
 			printf("\n");
-
+			
+			rx_mqtt_data = myChar;		
+			
 			int8_t rssi, snr;
 			GetPacketStatus(&rssi, &snr);
 			printf("rssi=%d[dBm] snr=%d[dB]\n", rssi, snr);
@@ -164,6 +174,7 @@
 				}
 			}
 
+		
 			// Wait for transmission to complete
 			if (LoRaSend(txData, rxLen, LLCC68_TXMODE_SYNC)) {
 				ESP_LOGD(pcTaskGetName(NULL), "Send success");
