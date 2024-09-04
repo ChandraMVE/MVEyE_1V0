@@ -20,7 +20,7 @@
 #include "lora_app.h"
 #include "leds.h"
 
-char rx_mqtt_data;
+char mqtt_message[256];
 
 static const char *TAG = "mqtt5_example";
 
@@ -117,7 +117,7 @@ static void mqtt5_event_handler(void *handler_args, esp_event_base_t base, int32
         print_user_property(event->property->user_property);
         esp_mqtt5_client_set_user_property(&publish_property.user_property, user_property_arr, USE_PROPERTY_ARR_SIZE);
         esp_mqtt5_client_set_publish_property(client, &publish_property);
-        msg_id = esp_mqtt_client_publish(client, "/topic/qos1", &rx_mqtt_data, 0, 1, 1);
+        msg_id = esp_mqtt_client_publish(client, "/topic/qos1", mqtt_message, 0, 1, 1);
         esp_mqtt5_client_delete_user_property(publish_property.user_property);
         publish_property.user_property = NULL;
         ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
@@ -151,7 +151,7 @@ static void mqtt5_event_handler(void *handler_args, esp_event_base_t base, int32
         ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
         print_user_property(event->property->user_property);
         esp_mqtt5_client_set_publish_property(client, &publish_property);
-        msg_id = esp_mqtt_client_publish(client, "/topic/qos0", &rx_mqtt_data, 0, 0, 0);
+        msg_id = esp_mqtt_client_publish(client, "/topic/qos0", mqtt_message, 0, 0, 0);
         ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
         break;
     case MQTT_EVENT_UNSUBSCRIBED:
@@ -281,11 +281,6 @@ void app_main(void)
     esp_log_level_set("esp-tls", ESP_LOG_VERBOSE);
     esp_log_level_set("transport", ESP_LOG_VERBOSE);
     esp_log_level_set("outbox", ESP_LOG_VERBOSE);
-
-    init_leds();
-    create_leds_task();
-    LoRaAppInit();
-    create_lora_task();
     
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
@@ -297,5 +292,10 @@ void app_main(void)
      */
     ESP_ERROR_CHECK(example_connect());
 
+    init_leds();
+    create_leds_task();
+    LoRaAppInit();
+    create_lora_task();
+    ESP_LOGI(pcTaskGetName(NULL), "mqtt_message %s",mqtt_message);
     mqtt5_app_start();
 }

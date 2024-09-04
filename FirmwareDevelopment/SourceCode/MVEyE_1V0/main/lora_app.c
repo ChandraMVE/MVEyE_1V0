@@ -48,15 +48,15 @@
 //==============================================================================
 #define TAG "LORA_APP"
 #define TIMEOUT 100
-#define PING 0
-#define PONG 1
+#define PING 1
+#define PONG 0
 //==============================================================================
 //   __        __   __                          __   __
 //  / _` |    /  \ |__)  /\  |       \  /  /\  |__) /__`
 //  \__> |___ \__/ |__) /~~\ |___     \/  /~~\ |  \ .__/
 //
 //==============================================================================
-char myChar;
+extern char mqtt_message[256];
 //==============================================================================
 //   __  ___      ___    __                __   __
 //  /__`  |   /\   |  | /  `    \  /  /\  |__) /__`
@@ -93,13 +93,14 @@ char myChar;
 			TickType_t startTick = xTaskGetTickCount();
 			while(waiting) {
 				uint8_t rxLen = LoRaReceive(rxData, sizeof(rxData));
-				
-				for(int i=0;i< rxLen;i++) 
-				{
-					myChar = rxData[i];
-				}
-					rx_mqtt_data = myChar;
 					
+			for (int i = 0; i < rxLen; i++) 
+			{
+        		mqtt_message[i] = (char)rxData[i];
+    		}
+    			mqtt_message[rxLen] = '\0';
+    			ESP_LOGI(pcTaskGetName(NULL), "mqtt_message %s",mqtt_message);
+    			
 				TickType_t currentTick = xTaskGetTickCount();
 				TickType_t diffTick = currentTick - startTick;
 				if ( rxLen > 0 ) {
@@ -137,31 +138,35 @@ char myChar;
  ******************************************************************************/
  void task_pong (void *pvParameters)
  {
-	 
 	 ESP_LOGI(pcTaskGetName(NULL), "Start");
 	uint8_t txData[256]; // Maximum Payload size of SX1261/62/68 is 255
 	uint8_t rxData[256]; // Maximum Payload size of SX1261/62/68 is 255
 	while(1) {
 		uint8_t rxLen = LoRaReceive(rxData, sizeof(rxData));
+		
+		for (int i = 0; i < rxLen; i++) 
+		{
+        	mqtt_message[i] = (char)rxData[i];
+    	}
+    		mqtt_message[rxLen] = '\0';
+    			
 		if ( rxLen > 0 ) { 
 			printf("Receive rxLen:%d\n", rxLen);
 			for(int i=0;i< rxLen;i++) {
 				printf("%02x ",rxData[i]);
 			}
 			printf("\n");
-		
+
 			for(int i=0;i< rxLen;i++) {
 				if (rxData[i] > 0x19 && rxData[i] < 0x7F) {
-					myChar = rxData[i];
+					char myChar = rxData[i];
 					printf("%c", myChar);
 				} else {
 					printf("?");
 				}
 			}
 			printf("\n");
-			
-			rx_mqtt_data = myChar;		
-			
+
 			int8_t rssi, snr;
 			GetPacketStatus(&rssi, &snr);
 			printf("rssi=%d[dBm] snr=%d[dB]\n", rssi, snr);
@@ -174,14 +179,12 @@ char myChar;
 				}
 			}
 
-		
 			// Wait for transmission to complete
 			if (LoRaSend(txData, rxLen, LLCC68_TXMODE_SYNC)) {
 				ESP_LOGD(pcTaskGetName(NULL), "Send success");
 			} else {
 				ESP_LOGE(pcTaskGetName(NULL), "LoRaSend fail");
 			}
-
 		}
 		vTaskDelay(1); // Avoid WatchDog alerts
 	} // end while 
@@ -283,5 +286,3 @@ void LoRaAppInit(void)
 #endif
 	LoRaConfig(spreadingFactor, bandwidth, codingRate, preambleLength, payloadLen, crcOn, invertIrq);
 }
-
-
