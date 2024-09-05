@@ -35,6 +35,7 @@
 //
 //==============================================================================
 #include "accelerometer_KXTJ3.h"
+#include "accelero_driver.h"
 #include "driver/i2c_master.h"
 #include "hal/i2c_types.h"
 #include "hal/i2c_hal.h"
@@ -80,8 +81,10 @@
  ******************************************************************************/
  static void Accelerometer_Task (void *pvParameters)
  {
- 	ESP_LOGI(pcTaskGetName(NULL), "Start");
 
+ 	ESP_LOGI(pcTaskGetName(NULL), "Start");
+	 #if 0
+	 
 	uint8_t I_AM;    
     float x, y, z;
     // Initialize KXTJ3-1057
@@ -104,6 +107,14 @@
 		// Print accelerometer data
     	ESP_LOGI(TAG, "Accelerometer readings: X=%f, Y=%f, Z=%f", x, y, z);
     	
+		vTaskDelay(pdMS_TO_TICKS(1000));
+	} // end while 
+	#endif
+	setup_accelero_latched();
+	//setup_accelero_unlatched();
+	while(1){
+		app_main_accelero_latched();
+		//app_main_accelero_unlatched();
 		vTaskDelay(pdMS_TO_TICKS(1000));
 	} // end while 
  }

@@ -140,7 +140,7 @@ void app_main(void)
     create_leds_task();
     LoRaAppInit();
     create_lora_task();
-    accel7_i2cDriverInit();
+    //accel7_i2cDriverInit();
     create_Accelerometer_task();
 
     while(1)
