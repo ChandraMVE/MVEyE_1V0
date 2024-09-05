@@ -13,6 +13,9 @@ It uses ESP-MQTT library which implements mqtt client to connect to mqtt broker 
 
 The more details about MQTT v5, please refer to [official website](https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html)
 
+Note: Dependcies.lock file generating after each build make sure to update the path where example_protocols is present.
+Also make sure to change the WIFI SSID and password.
+
 ## How to use example
 
 ### Hardware Required

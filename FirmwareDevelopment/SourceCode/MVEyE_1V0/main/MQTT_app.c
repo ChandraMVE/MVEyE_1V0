@@ -1,8 +1,39 @@
-/*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: Apache-2.0
- */
+//-----------------------------------------------------------------
+///
+///     \file MQTT_app.c
+///
+///     \brief MQTT application framework driver
+///
+///
+///     \author       Keerthi Mallesh
+///
+///     Location:     India
+///
+///     Project Name: MVEyE_1V0
+///
+///     \date Created 05SEP2024
+///
+///      Tools:  EspressifIDE
+///      Device:   ESP32WROOM
+///		 Operating System: windows 10
+/// 	 Java Runtime Version: 17.0.11+9
+///      Eclipse Version: 4.30.0.v20231201-0110
+///      Eclipse CDT Version: 11.4.0.202309142347
+///      IDF Eclipse Plugin Version: 3.0.0.202406051940
+///      IDF Version:   5.3
+///
+/// Copyright © 2024 MicriVision Embedded Pvt Ltd
+///
+/// Confidential Property of MicroVision Embedded Pvt Ltd
+///
+//-----------------------------------------------------------------
+
+//==============================================================================
+//          __             __   ___  __
+//  | |\ | /  ` |    |  | |  \ |__  /__`
+//  | | \| \__, |___ \__/ |__/ |___ .__/
+//
+//==============================================================================
 
 #include <stdio.h>
 #include <stdint.h>
@@ -16,33 +47,45 @@
 #include "esp_log.h"
 #include "mqtt_client.h"
 
-#include "lora_llc68.h"
-#include "lora_app.h"
-#include "leds.h"
+//==============================================================================
+//   __   ___  ___         ___  __
+//  |  \ |__  |__  | |\ | |__  /__`
+//  |__/ |___ |    | | \| |___ .__/
+//
+//==============================================================================
+#define TAG "MQTT_app"
 
-#include "Accelerometer_app.h"
-#include "accelerometer_KXTJ3.h"
+#define USE_PROPERTY_ARR_SIZE   sizeof(user_property_arr)/sizeof(esp_mqtt5_user_property_item_t)
 
+//==============================================================================
+//   __        __   __                          __   __
+//  / _` |    /  \ |__)  /\  |       \  /  /\  |__) /__`
+//  \__> |___ \__/ |__) /~~\ |___     \/  /~~\ |  \ .__/
+//
+//==============================================================================
 char mqtt_message[256];
 
-static const char *TAG = "mqtt5_example";
+//==============================================================================
+//   __  ___      ___    __                __   __
+//  /__`  |   /\   |  | /  `    \  /  /\  |__) /__`
+//  .__/  |  /~~\  |  | \__,     \/  /~~\ |  \ .__/
+//
+//==============================================================================
 
-static void log_error_if_nonzero(const char *message, int error_code)
+void log_error_if_nonzero(const char *message, int error_code)
 {
     if (error_code != 0) {
         ESP_LOGE(TAG, "Last error %s: 0x%x", message, error_code);
     }
 }
 
-static esp_mqtt5_user_property_item_t user_property_arr[] = {
+esp_mqtt5_user_property_item_t user_property_arr[] = {
         {"board", "esp32"},
         {"u", "user"},
         {"p", "password"}
     };
 
-#define USE_PROPERTY_ARR_SIZE   sizeof(user_property_arr)/sizeof(esp_mqtt5_user_property_item_t)
-
-static esp_mqtt5_publish_property_config_t publish_property = {
+esp_mqtt5_publish_property_config_t publish_property = {
     .payload_format_indicator = 1,
     .message_expiry_interval = 1000,
     .topic_alias = 0,
@@ -51,7 +94,7 @@ static esp_mqtt5_publish_property_config_t publish_property = {
     .correlation_data_len = 6,
 };
 
-static esp_mqtt5_subscribe_property_config_t subscribe_property = {
+esp_mqtt5_subscribe_property_config_t subscribe_property = {
     .subscribe_id = 25555,
     .no_local_flag = false,
     .retain_as_published_flag = false,
@@ -60,31 +103,31 @@ static esp_mqtt5_subscribe_property_config_t subscribe_property = {
     .share_name = "group1",
 };
 
-static esp_mqtt5_subscribe_property_config_t subscribe1_property = {
+esp_mqtt5_subscribe_property_config_t subscribe1_property = {
     .subscribe_id = 25555,
     .no_local_flag = true,
     .retain_as_published_flag = false,
     .retain_handle = 0,
 };
 
-static esp_mqtt5_unsubscribe_property_config_t unsubscribe_property = {
+esp_mqtt5_unsubscribe_property_config_t unsubscribe_property = {
     .is_share_subscribe = true,
     .share_name = "group1",
 };
 
-static esp_mqtt5_disconnect_property_config_t disconnect_property = {
+esp_mqtt5_disconnect_property_config_t disconnect_property = {
     .session_expiry_interval = 60,
     .disconnect_reason = 0,
 };
 
-static void print_user_property(mqtt5_user_property_handle_t user_property)
+void print_user_property(mqtt5_user_property_handle_t user_property)
 {
     if (user_property) {
         uint8_t count = esp_mqtt5_client_get_user_property_count(user_property);
         if (count) {
             esp_mqtt5_user_property_item_t *item = malloc(count * sizeof(esp_mqtt5_user_property_item_t));
             if (esp_mqtt5_client_get_user_property(user_property, item, &count) == ESP_OK) {
-                for (int i = 0; i < count; i ++) {
+                for (int i = 0; i < count; i++) {
                     esp_mqtt5_user_property_item_t *t = &item[i];
                     ESP_LOGI(TAG, "key is %s, value is %s", t->key, t->value);
                     free((char *)t->key);
@@ -96,17 +139,20 @@ static void print_user_property(mqtt5_user_property_handle_t user_property)
     }
 }
 
-/*
- * @brief Event handler registered to receive MQTT events
+/***********************************************************************************
+ * Function name  : mqtt_event_handler
  *
- *  This function is called by the MQTT client event loop.
+ * Description    : mqtt5 event handler.
+ * Parameters     : handler arguments pointer, base, evvent_id, event data pointer
+ * Returns        : None
  *
- * @param handler_args user data registered to the event.
- * @param base Event base for the handler(always MQTT Base in this example).
- * @param event_id The id for the received event.
- * @param event_data The data for the event, esp_mqtt_event_handle_t.
- */
-static void mqtt5_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
+ * Known Issues   :
+ * Note           :
+ * author         : Keerthi Mallesh
+ * date           : 05SEP2024
+ ***********************************************************************************/
+ 
+void mqtt5_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
     ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%" PRIi32, base, event_id);
     esp_mqtt_event_handle_t event = event_data;
@@ -197,7 +243,20 @@ static void mqtt5_event_handler(void *handler_args, esp_event_base_t base, int32
     }
 }
 
-static void mqtt5_app_start(void)
+/*******************************************************************************
+ * Function name  : mqtt_app_start
+ *
+ * Description    : mqtt5 application inialization and start the app.
+ * Parameters     : None
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Keerthi Mallesh
+ * date           : 05SEP2024
+ ******************************************************************************/
+ 
+void mqtt5_app_start(void)
 {
     esp_mqtt5_connection_property_config_t connect_property = {
         .session_expiry_interval = 10,
@@ -270,7 +329,20 @@ static void mqtt5_app_start(void)
     esp_mqtt_client_start(client);
 }
 
-void app_main(void)
+/*******************************************************************************
+ * Function name  : mqtt_task
+ *
+ * Description    : this function checks whether the Wifi is connected.
+ * Parameters     : None
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Keerthi Mallesh
+ * date           : 05SEP2024
+ ******************************************************************************/
+ 
+void mqtt_task(void *pvParameters)
 {
 
     ESP_LOGI(TAG, "[APP] Startup..");
@@ -294,15 +366,26 @@ void app_main(void)
      * examples/protocols/README.md for more information about this function.
      */
     ESP_ERROR_CHECK(example_connect());
-
-    init_leds();
-    create_leds_task();
-    
-    accel7_i2cDriverInit();
-    create_Accelerometer_task();
-    
-    LoRaAppInit();
-    create_lora_task();
     
     mqtt5_app_start();
 }
+
+/*******************************************************************************
+ * Function name  : create_mqtt_task
+ *
+ * Description    : this function creates the mqtt task.
+ * Parameters     : None
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Keerthi Mallesh
+ * date           : 05SEP2024
+ ******************************************************************************/
+
+void create_mqtt_task( void )
+{
+	xTaskCreate(&mqtt_task, "mqtt_task", 1024*4, NULL, 20, NULL);
+}
+
+
