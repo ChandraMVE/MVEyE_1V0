@@ -417,7 +417,6 @@ kxtj3_status_t readRegister_acceleroRegion(uint8_t *outputPointer, uint8_t offse
 kxtj3_status_t readRegister_accelero(uint8_t *outputPointer, uint8_t offset)
 {
   // Return value
-  uint8_t result             = 0;
   kxtj3_status_t returnError = IMU_SUCCESS;
 
   ESP_ERROR_CHECK(i2c_accelero_register_read(offset, outputPointer, 1));
