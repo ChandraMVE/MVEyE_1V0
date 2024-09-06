@@ -25,8 +25,7 @@ static const char *TAG = "accelero_driver";
 
 #define ACCELERO_SENSOR_ADDR                 0x0F        /*!< Slave address of the accelero sensor */
 
-
-#define GPIO_INPUT_IO_34     GPIO_NUM_34
+#define GPIO_INPUT_IO_34    34//GPIO_NUM_34
 #define GPIO_INPUT_PIN_SEL  (1ULL<<GPIO_INPUT_IO_34)
 #define ESP_INTR_FLAG_DEFAULT 0
 
@@ -48,12 +47,12 @@ void setup_accelero_latched()
 	bool pulsed = false; // Disables pulsed interrupt mode
 	bool motion = false; // Disables Motion Detection interrupt
 	bool dataReady = true; // Enables New Data Ready interrupt
-	bool intPin = false; // Disables INT pin operation
+	bool intPin = true;//false; // Disables INT pin operation
 
 
   vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-  if (begin(sampleRate, accelRange, highRes, 1) == IMU_SUCCESS)
+  if (begin(sampleRate, accelRange, highRes, 0) == IMU_SUCCESS)
   {
     printf("IMU initialized.\r\n");
   }
@@ -90,19 +89,18 @@ void setup_accelero_latched()
 
 void app_main_accelero_latched(void)
 {
-	  ESP_LOGI(TAG, "inside accelero app\r\n");
+	  //ESP_LOGI(TAG, "inside accelero latched app\r\n");
+	  printf("******gpio level *********** = %d\r\n", gpio_get_level(GPIO_INPUT_IO_34));
 	  // Check to see if new data is ready
 	  if (dataReady())
 	  {
 	    // Since new data is ready, read it
-	    printf(" Acceleration X float = %f\r\n", axisAccel(X));
-	    printf(" Acceleration Y float = %f\r\n", axisAccel(Y));
-	    printf(" Acceleration Z float = %f\r\n", axisAccel(Z));
+	    printf(" Acceleration X, Y, Z = %f %f %f\r\n", axisAccel(X), axisAccel(Y), axisAccel(Z));
 	    // Reading acceleration data resets the Data Ready latch
 	    // Motion Detection requires manually resetting the latch
 	    //ResetInterrupt();
 	  }
-	  vTaskDelay(1000 / portTICK_PERIOD_MS);
+	  vTaskDelay(100 / portTICK_PERIOD_MS);
 }
 
 
@@ -137,10 +135,60 @@ String printAxis(wu_axis_t axis)
 }
 #endif
 
+static QueueHandle_t gpio_evt_queue = NULL;
+
 static void IRAM_ATTR gpio_isr_handler(void* arg)
 {
     uint32_t gpio_num = (uint32_t) arg;
-    printf("Indide isr\r\n");
+    xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
+}
+
+static void gpio_task_example(void* arg)
+{
+    uint32_t io_num;
+    for (;;) {
+        if (xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
+            printf("GPIO[%"PRIu32"] intr, val: %d\n", io_num, gpio_get_level(io_num));
+            printf(" Acceleration X, Y, Z = %f %f %f\r\n", axisAccel(X), axisAccel(Y), axisAccel(Z));
+        }
+    }
+}
+
+void config_accelero_interrupt()
+{
+
+    //create a queue to handle gpio event from isr
+    gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
+    //start gpio task
+    xTaskCreate(gpio_task_example, "gpio_task_example", 2048, NULL, 10, NULL);
+    	
+    //zero-initialize the config structure.
+    gpio_config_t io_conf = {};
+    
+    //interrupt of rising edge
+    io_conf.intr_type = GPIO_INTR_POSEDGE;
+    //bit mask of the pins
+    io_conf.pin_bit_mask = GPIO_INPUT_PIN_SEL;
+    //set as input mode
+    io_conf.mode = GPIO_MODE_INPUT;
+    //enable pull-up mode
+    io_conf.pull_up_en = 1;
+    gpio_config(&io_conf);
+
+#if 1
+    //change gpio interrupt type for one pin
+    //gpio_set_intr_type(GPIO_INPUT_IO_34, GPIO_INTR_ANYEDGE);
+    
+        //install gpio isr service
+    gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
+    //hook isr handler for specific gpio pin
+    gpio_isr_handler_add(GPIO_INPUT_IO_34, gpio_isr_handler, (void*) GPIO_INPUT_IO_34);
+
+    //remove isr handler for gpio number.
+    gpio_isr_handler_remove(GPIO_INPUT_IO_34);
+    //hook isr handler for specific gpio pin again
+    gpio_isr_handler_add(GPIO_INPUT_IO_34, gpio_isr_handler, (void*) GPIO_INPUT_IO_34);
+    #endif
 }
 
 bool detectedInterrupt = false; // Create variable for detection
@@ -156,36 +204,7 @@ bool highRes = true; // Set high resolution mode on
 int16_t threshold = 128; // Sets wake-up threshold to 0.5g
 uint8_t moveDur = 1; // Sets movement duration to 160ms
 uint8_t naDur = 10; // Sets non-activity duration to 1.6s
-bool polarity = 1; // Sets INT pin polarity to active HIGH
-
-
-    //zero-initialize the config structure.
-    gpio_config_t io_conf = {};
-    
-    //interrupt of rising edge
-    io_conf.intr_type = GPIO_INTR_POSEDGE;
-    //bit mask of the pins
-    io_conf.pin_bit_mask = GPIO_INPUT_PIN_SEL;
-    //set as input mode
-    io_conf.mode = GPIO_MODE_INPUT;
-    //enable pull-up mode
-    io_conf.pull_up_en = 1;
-    gpio_config(&io_conf);
-
-    //change gpio interrupt type for one pin
-    gpio_set_intr_type(GPIO_INPUT_IO_34, GPIO_INTR_ANYEDGE);
-    
-        //install gpio isr service
-    gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
-    //hook isr handler for specific gpio pin
-    gpio_isr_handler_add(GPIO_INPUT_IO_34, gpio_isr_handler, (void*) GPIO_INPUT_IO_34);
-
-    //remove isr handler for gpio number.
-    gpio_isr_handler_remove(GPIO_INPUT_IO_34);
-    //hook isr handler for specific gpio pin again
-    gpio_isr_handler_add(GPIO_INPUT_IO_34, gpio_isr_handler, (void*) GPIO_INPUT_IO_34);
-    
-  vTaskDelay(1000 / portTICK_PERIOD_MS);
+bool polarity = 1; // Sets INT pin polarity to active HIGH(1); active low(0)
 
   if (begin(sampleRate, accelRange, highRes, 1) == IMU_SUCCESS)
   {
@@ -196,7 +215,9 @@ bool polarity = 1; // Sets INT pin polarity to active HIGH
     printf("Failed to initialize IMU.\r\n");
     while(true); // stop running sketch if failed
   }
-
+    
+  vTaskDelay(1000 / portTICK_PERIOD_MS);
+  
   uint8_t readData = 0;
 
   // Get the ID:
@@ -213,8 +234,6 @@ bool polarity = 1; // Sets INT pin polarity to active HIGH
   // 10 / 6.25 = 1.6s non-activity reset
   // INT pin active HIGH
   // Wake-Up Sample Rate == IMU Sample Rate (6.25 Hz)
-  
-  
   
   float wuRate = -1;
   bool latched = false;
@@ -250,9 +269,11 @@ void app_main_accelero_unlatched(void)
   // If it is and we haven't already detected interrupt, print
   // Also asks which axis triggered the interrupt
   // If pin goes LOW we reset the sentinel value to try again
+  printf("******gpio level *********** = %d\r\n", gpio_get_level(GPIO_INPUT_IO_34));
+  printf("******* mot detected = %d\r\n", motionDetected());
   if (gpio_get_level(GPIO_INPUT_IO_34) == 1 && !detectedInterrupt)
   {
-    printf(" Interrupt fired!");
+    printf(" ***********Interrupt fired!");
     printf(" Motion Direction: ");
     //printf(printAxis(motionDirection()));
     resetInterrupt(); // reset direction bit

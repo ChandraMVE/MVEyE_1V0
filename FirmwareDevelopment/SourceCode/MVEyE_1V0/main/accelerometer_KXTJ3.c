@@ -1,3 +1,4 @@
+#if 0
 //-----------------------------------------------------------------
 ///
 ///     \file accelerometer_KXTJ3.c
@@ -522,7 +523,7 @@ uint8_t accel7_getInterruptState(uint8_t pin)
 {
     return gpio_get_level(pin);
 }
-
+#endif
 
 
 

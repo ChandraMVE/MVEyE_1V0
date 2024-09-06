@@ -1,3 +1,4 @@
+#if 0
 //-----------------------------------------------------------------
 ///
 ///     \file accelerometer_KXTJ3.h
@@ -239,3 +240,4 @@ uint8_t accel7_getInterruptState(uint8_t pin);
 
 
 #endif /* MAIN_ACCELEROMETER_KXTJ3_H_ */
+#endif

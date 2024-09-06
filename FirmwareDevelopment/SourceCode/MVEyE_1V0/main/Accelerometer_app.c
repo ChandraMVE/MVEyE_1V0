@@ -110,12 +110,14 @@
 		vTaskDelay(pdMS_TO_TICKS(1000));
 	} // end while 
 	#endif
+	
+	config_accelero_interrupt();
 	setup_accelero_latched();
 	//setup_accelero_unlatched();
 	while(1){
-		app_main_accelero_latched();
+		//app_main_accelero_latched();
 		//app_main_accelero_unlatched();
-		vTaskDelay(pdMS_TO_TICKS(1000));
+		vTaskDelay(pdMS_TO_TICKS(100));
 	} // end while 
  }
 
@@ -133,7 +135,7 @@
  ******************************************************************************/
 void create_Accelerometer_task(void)
 {
-    xTaskCreate(Accelerometer_Task, "Accelerometer_Task", 1024*8, NULL, 1, NULL);
+    xTaskCreate(Accelerometer_Task, "Accelerometer_Task", 1024*32, NULL, 1, NULL);
 
 }
 

@@ -121,6 +121,8 @@ typedef enum {
   // Start-up delay for coming out of standby
   void startupDelay(void);
 
+void config_accelero_interrupt();
+
 void setup_accelero_latched();
 void app_main_accelero_latched(void);
 

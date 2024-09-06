@@ -138,8 +138,8 @@ void app_main(void)
     get_esp32_version();
     init_leds();
     create_leds_task();
-    LoRaAppInit();
-    create_lora_task();
+    //LoRaAppInit();
+    //create_lora_task();
     //accel7_i2cDriverInit();
     create_Accelerometer_task();
 
