@@ -10,32 +10,31 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include "driver/gpio.h"
+
 static const char *TAG = "accelero_driver";
 
-#define I2C_SDA 	GPIO_NUM_0
-#define I2C_SCL		GPIO_NUM_4
+#define I2C_SDA 					GPIO_NUM_0
+#define I2C_SCL						GPIO_NUM_4
 
 #define I2C_MASTER_SCL_IO           I2C_SCL      /*!< GPIO number used for I2C master clock */
 #define I2C_MASTER_SDA_IO           I2C_SDA      /*!< GPIO number used for I2C master data  */
-#define I2C_MASTER_NUM              0                          /*!< I2C master i2c port number, the number of i2c peripheral interfaces available will depend on the chip */
-#define I2C_MASTER_FREQ_HZ          400000                     /*!< I2C master clock frequency */
-#define I2C_MASTER_TX_BUF_DISABLE   0                          /*!< I2C master doesn't need buffer */
-#define I2C_MASTER_RX_BUF_DISABLE   0                          /*!< I2C master doesn't need buffer */
+#define I2C_MASTER_NUM              0            /*!< I2C master i2c port number, the number of i2c peripheral interfaces available will depend on the chip */
+#define I2C_MASTER_FREQ_HZ          400000       /*!< I2C master clock frequency */
+#define I2C_MASTER_TX_BUF_DISABLE   0            /*!< I2C master doesn't need buffer */
+#define I2C_MASTER_RX_BUF_DISABLE   0            /*!< I2C master doesn't need buffer */
 #define I2C_MASTER_TIMEOUT_MS       1000
 
-#define ACCELERO_SENSOR_ADDR                 0x0F        /*!< Slave address of the accelero sensor */
+#define ACCELERO_SENSOR_ADDR        0x0F        /*!< Slave address of the accelero sensor */
 
-#define GPIO_INPUT_IO_34    34//GPIO_NUM_34
-#define GPIO_INPUT_PIN_SEL  (1ULL<<GPIO_INPUT_IO_34)
-#define ESP_INTR_FLAG_DEFAULT 0
+#define GPIO_INPUT_IO_34    		GPIO_NUM_34
+#define GPIO_INPUT_PIN_SEL  		(1ULL<<GPIO_INPUT_IO_34)
+#define ESP_INTR_FLAG_DEFAULT 		0
 
 void setup_accelero_latched()
 {
-
-	float sampleRate =
-	   0.781; // HZ - Samples per second - 0.781, 1.563, 3.125, 6.25,
-	          // 12.5, 25, 50, 100, 200, 400, 800, 1600Hz
-	          // Sample rates ≥ 400Hz force High Resolution mode on
+	float sampleRate = 200; // HZ - Samples per second - 0.781, 1.563, 3.125, 6.25,
+	          				// 12.5, 25, 50, 100, 200, 400, 800, 1600Hz
+	          				// Sample rates ≥ 400Hz force High Resolution mode on
 	uint8_t accelRange = 2; // 14-bit Mode only supports 8g or 16g
 	bool highRes = true; // Set high resolution mode on
 	int16_t threshold = 0; // Sets wake-up threshold to default
@@ -86,7 +85,6 @@ void setup_accelero_latched()
   }
 }
 
-
 void app_main_accelero_latched(void)
 {
 	  //ESP_LOGI(TAG, "inside accelero latched app\r\n");
@@ -102,7 +100,6 @@ void app_main_accelero_latched(void)
 	  }
 	  vTaskDelay(100 / portTICK_PERIOD_MS);
 }
-
 
 #if 0
 // Function to print user-friendly interrupt axis names
@@ -143,7 +140,7 @@ static void IRAM_ATTR gpio_isr_handler(void* arg)
     xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
 }
 
-static void gpio_task_example(void* arg)
+static void accelero_gpio_interrupt_task(void* arg)
 {
     uint32_t io_num;
     for (;;) {
@@ -156,11 +153,10 @@ static void gpio_task_example(void* arg)
 
 void config_accelero_interrupt()
 {
-
     //create a queue to handle gpio event from isr
     gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
     //start gpio task
-    xTaskCreate(gpio_task_example, "gpio_task_example", 2048, NULL, 10, NULL);
+    xTaskCreate(accelero_gpio_interrupt_task, "accelero_gpio_interrupt_task", 2048, NULL, 10, NULL);
     	
     //zero-initialize the config structure.
     gpio_config_t io_conf = {};
@@ -175,9 +171,8 @@ void config_accelero_interrupt()
     io_conf.pull_up_en = 1;
     gpio_config(&io_conf);
 
-#if 1
     //change gpio interrupt type for one pin
-    //gpio_set_intr_type(GPIO_INPUT_IO_34, GPIO_INTR_ANYEDGE);
+    gpio_set_intr_type(GPIO_INPUT_IO_34, GPIO_INTR_ANYEDGE);
     
         //install gpio isr service
     gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
@@ -188,7 +183,7 @@ void config_accelero_interrupt()
     gpio_isr_handler_remove(GPIO_INPUT_IO_34);
     //hook isr handler for specific gpio pin again
     gpio_isr_handler_add(GPIO_INPUT_IO_34, gpio_isr_handler, (void*) GPIO_INPUT_IO_34);
-    #endif
+
 }
 
 bool detectedInterrupt = false; // Create variable for detection
@@ -326,19 +321,9 @@ static esp_err_t i2c_master_init(void)
     return i2c_driver_install(i2c_master_port, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0);
 }
 
-//#include "Wire.h"
-
-//****************************************************************************//
-//
-//  Default construction is I2C mode, address 0x0E.
-//
-//****************************************************************************//
-//KXTJ3::KXTJ3(uint8_t inputArg = 0x0F) { I2CAddress = inputArg; }
-
 bool highRes   = false;
 bool debugMode = false;
 bool en14Bit   = false;
-
 float accelSampleRate; // Sample Rate - 0.781, 1.563, 3.125, 6.25, 12.5, 25,
                        // 50, 100, 200, 400, 800, 1600Hz
 uint8_t accelRange;    // Accelerometer range = 2, 4, 8, 16g
