@@ -105,7 +105,7 @@ static void leds_task(void *pvParameters)
  ******************************************************************************/
 void create_leds_task(void)
 {
-	xTaskCreate(leds_task, "leds_task", 1024, NULL, 10, NULL);
+	xTaskCreate(leds_task, "leds_task", 1024, NULL, 15, NULL);
 }
 
 /*******************************************************************************

@@ -1,2 +1,2 @@
-idf_component_register(SRCS "MVEyE_1V0.c" "leds.c" "accelerometer_KXTJ3.c" "accelero_driver" "lora_llc68.c" "lora_app.c" "Accelerometer_app.c"
-                    INCLUDE_DIRS "")
+idf_component_register(SRCS "MVEye_1V0.c" "leds.c" "lora_llc68.c" "lora_app.c" "MQTT_app.c" "accelero_driver.c"
+                    INCLUDE_DIRS ".")

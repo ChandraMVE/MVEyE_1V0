@@ -40,8 +40,6 @@
 #include "lora_app.h"
 #include "lora_llc68.h"
 #include <ctype.h>
-#include "accelerometer_KXTJ3.h"
-#include "esp_err.h"
 #include "string.h"
 //==============================================================================
 //   __   ___  ___         ___  __
@@ -51,14 +49,25 @@
 //==============================================================================
 #define TAG "LORA_APP"
 #define TIMEOUT 100
-#define PING 1
-#define PONG 0
+#define PING 0
+#define PONG 1
+#define DEVICE_ID 001
+#define DESTINATION_DEVICE_ID 003
+#define MAX_HOPS 5
 //==============================================================================
 //   __        __   __                          __   __
 //  / _` |    /  \ |__)  /\  |       \  /  /\  |__) /__`
 //  \__> |___ \__/ |__) /~~\ |___     \/  /~~\ |  \ .__/
 //
 //==============================================================================
+typedef struct {
+	
+    uint8_t senderID;
+    uint8_t destinationID;
+    uint8_t hopCount;
+    char    payload[256];
+    
+} MeshPacket;
 
 //==============================================================================
 //   __  ___      ___    __                __   __
@@ -66,6 +75,9 @@
 //  .__/  |  /~~\  |  | \__,     \/  /~~\ |  \ .__/
 //
 //==============================================================================
+
+void forward_message(MeshPacket* packet);
+
 /*******************************************************************************
  * Function name  : task_ping
  *
@@ -81,46 +93,43 @@
  void task_ping (void *pvParameters)
  {
  	ESP_LOGI(pcTaskGetName(NULL), "Start");
- 	uint8_t txData[256]; // Maximum Payload size of SX1261/62/68 is 255
-	uint8_t rxData[256]; // Maximum Payload size of SX1261/62/68 is 255
+ 	MeshPacket packet;
+ 	
+ 	packet.senderID 	 = DEVICE_ID;
+    packet.destinationID = DESTINATION_DEVICE_ID;
+    packet.hopCount 	 = 0;
+ 	strcpy((char *)packet.payload, "Hello, this is a test message!");
 
-	while(1) {
+	uint8_t buffer[sizeof(MeshPacket)];
+	memcpy(buffer, &packet, sizeof(MeshPacket));
+
+	for(int i = 0;i < sizeof(MeshPacket); i++)
+	{
+		ESP_LOGI(TAG, "Buffer:%d",buffer[i]);
+	}
 	
-		TickType_t nowTick = xTaskGetTickCount();
-		int txLen = sprintf((char *)txData, "Hello World %"PRIu32, nowTick);
-		uint8_t len = strlen((char *)txData);
+	while(1) {
+		//TickType_t nowTick = xTaskGetTickCount();
 
 		// Wait for transmission to complete
-		if (LoRaSend(txData, txLen, LLCC68_TXMODE_SYNC)) {
-			ESP_LOGI(pcTaskGetName(NULL), "Send success");
+		if (LoRaSend(buffer, sizeof(MeshPacket), LLCC68_TXMODE_SYNC)) 
+		{	
+			// Print the data to be transmitted
+        	ESP_LOGI(TAG, "Transmitting Message:");
+        	ESP_LOGI(TAG, "Sender ID: %d", packet.senderID);
+        	ESP_LOGI(TAG, "Destination ID: %d", packet.destinationID);
+        	ESP_LOGI(TAG, "Hop Count: %d", packet.hopCount);
+        	ESP_LOGI(TAG, "Payload: %s", packet.payload);	
+        	
+         ESP_LOGI(pcTaskGetName(NULL), "Ping message sent");
+        } else {
+            ESP_LOGE(pcTaskGetName(NULL), "Ping message failed");
+        }	
+        
+                vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
 
-			bool waiting = true;
-			TickType_t startTick = xTaskGetTickCount();
-			while(waiting) {
-				uint8_t rxLen = LoRaReceive(rxData, sizeof(rxData));
-				TickType_t currentTick = xTaskGetTickCount();
-				TickType_t diffTick = currentTick - startTick;
-				if ( rxLen > 0 ) {
-					ESP_LOGI(pcTaskGetName(NULL), "%d byte packet received:[%.*s]", rxLen, rxLen, rxData);
-					ESP_LOGI(pcTaskGetName(NULL), "Response time is %"PRIu32" millisecond", diffTick * portTICK_PERIOD_MS);
-					waiting = false;
-				}
-				
-				ESP_LOGD(pcTaskGetName(NULL), "diffTick=%"PRIu32, diffTick);
-				if (diffTick > TIMEOUT) {
-					ESP_LOGW(pcTaskGetName(NULL), "No response within %d ticks", TIMEOUT);
-					waiting = false;
-				}
-				vTaskDelay(1); // Avoid WatchDog alerts
-			} // end waiting
-
-		} else {
-			ESP_LOGE(pcTaskGetName(NULL), "Send fail");
-		}
-
-		vTaskDelay(pdMS_TO_TICKS(1000));
-	} // end while 
- }
  /*******************************************************************************
  * Function name  : task_pong
  *
@@ -136,51 +145,49 @@
  void task_pong (void *pvParameters)
  {
 	 ESP_LOGI(pcTaskGetName(NULL), "Start");
+	 
 	uint8_t txData[256]; // Maximum Payload size of SX1261/62/68 is 255
 	uint8_t rxData[256]; // Maximum Payload size of SX1261/62/68 is 255
+	
+	MeshPacket receivedPacket;
+	
+	uint8_t buffer[20];
+	
 	while(1) {
-		uint8_t rxLen = LoRaReceive(rxData, sizeof(rxData));
+		uint8_t rxLen = LoRaReceive(buffer, sizeof(buffer));
+		
 		if ( rxLen > 0 ) { 
-			printf("Receive rxLen:%d\n", rxLen);
-			for(int i=0;i< rxLen;i++) {
-				printf("%02x ",rxData[i]);
-			}
-			printf("\n");
+		
+        	
+			if (receivedPacket.destinationID == DEVICE_ID) {
+                ESP_LOGI(TAG, "Message received for me: %s", receivedPacket.payload);
+               
 
-			for(int i=0;i< rxLen;i++) {
-				if (rxData[i] > 0x19 && rxData[i] < 0x7F) {
-					char myChar = rxData[i];
-					printf("%c", myChar);
-				} else {
-					printf("?");
-				}
-			}
-			printf("\n");
-
-			int8_t rssi, snr;
-			GetPacketStatus(&rssi, &snr);
-			printf("rssi=%d[dBm] snr=%d[dB]\n", rssi, snr);
-
-			for(int i=0;i<rxLen;i++) {
-				if (isupper(rxData[i])) {
-					txData[i] = tolower(rxData[i]);
-				} else {
-					txData[i] = toupper(rxData[i]);
-				}
-			}
-
-			// Wait for transmission to complete
-			if (LoRaSend(txData, rxLen, LLCC68_TXMODE_SYNC)) {
-				ESP_LOGD(pcTaskGetName(NULL), "Send success");
-			} else {
-				ESP_LOGE(pcTaskGetName(NULL), "LoRaSend fail");
-			}
-
-		}
-		vTaskDelay(1); // Avoid WatchDog alerts
-	} // end while 
- }
- 
+                 // Send the response
+                receivedPacket.senderID = DEVICE_ID;
+                receivedPacket.destinationID = receivedPacket.senderID;
+                receivedPacket.hopCount = 0;
+                if (LoRaSend(buffer, sizeof(MeshPacket), LLCC68_TXMODE_SYNC)) {
+                    ESP_LOGI(TAG, "Pong response sent");
+                } else {
+                    ESP_LOGE(TAG, "Pong response failed");
+                }
+            } else {
+                // Forward the message if it's not for this device
+                ESP_LOGI(TAG, "Message received for another device, forwarding...");
+                forward_message(&receivedPacket); 
+            }
+        }
+        
+        vTaskDelay(1); // Avoid WatchDog alerts
+    }
+    
+    			for(int i = 0; i < sizeof( buffer ); i++ )
+				{
+					ESP_LOGI(TAG, "Received information %d", buffer[i]);
+				}	
+}               
+                              
 /*******************************************************************************
  * Function name  : create_lora_task
  *
@@ -263,8 +270,8 @@ void LoRaAppInit(void)
 		}
 	}
 	
-	uint8_t spreadingFactor = 7;
-	uint8_t bandwidth = LLCC68_LORA_BW_125_0;
+	uint8_t spreadingFactor = 11;
+	uint8_t bandwidth = LLCC68_LORA_BW_500_0;
 	uint8_t codingRate = LLCC68_LORA_CR_4_5;
 	uint16_t preambleLength = 8;
 	uint8_t payloadLen = 0;
@@ -278,4 +285,29 @@ void LoRaAppInit(void)
 	LoRaConfig(spreadingFactor, bandwidth, codingRate, preambleLength, payloadLen, crcOn, invertIrq);
 }
 
+/*******************************************************************************
+ * Function name  : forward_message
+ *
+ * Description    : maintains the hoping mechanism.
+ * Parameters     : packet pointer
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Keerthi Mallesh
+ * date           : 06SEP2024
+ ******************************************************************************/
+ 
+void forward_message(MeshPacket* packet) {
+    if (packet->hopCount >= MAX_HOPS) {
+        ESP_LOGW(TAG, "Message dropped, exceeded max hops");
+        return;
+    }
 
+    packet->hopCount++;
+    if (LoRaSend((uint8_t*)packet, sizeof(MeshPacket), LLCC68_TXMODE_SYNC)) {
+        ESP_LOGI(TAG, "Message forwarded, hop count: %d", packet->hopCount);
+    } else {
+        ESP_LOGE(TAG, "Failed to forward message");
+    }
+}

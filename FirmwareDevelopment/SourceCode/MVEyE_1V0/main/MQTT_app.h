@@ -1,17 +1,17 @@
 //-----------------------------------------------------------------
 ///
-///     \file Accelerometer_app.h
+///     \file mqtt_app.h
 ///
-///     \brief Accelerometer application framework driver header
+///     \brief mqtt application framework driver header
 ///
 ///
-///     \author       Chandrashekhar Venkatesh
+///     \author       Keerthi Mallesh
 ///
 ///     Location:     India
 ///
-///     Project Name: MVEyE_1V0
+///     Project Name: MQTT_app.h
 ///
-///     \date Created 20AUG2024
+///     \date Created 05SEP2024
 ///
 ///      Tools:  EspressifIDE
 ///      Device:   ESP32WROOM
@@ -28,13 +28,9 @@
 ///
 //-----------------------------------------------------------------
 
+#ifndef MAIN_MQTT_APP_H_
+#define MAIN_MQTT_APP_H_
 
-#ifndef MAIN_ACCELEROMETER_APP_H_
-#define MAIN_ACCELEROMETER_APP_H_
-
-
-#include "stdint.h"
-#include "driver/i2c_master.h"
 //==============================================================================
 //          __             __   ___  __
 //  | |\ | /  ` |    |  | |  \ |__  /__`
@@ -69,7 +65,14 @@
 //  |    \__/ |__) |___ | \__,    |    \__/ | \| \__,  |  | \__/ | \| .__/
 //
 //==============================================================================
+void create_mqtt_task(void);
+void mqtt_task(void *pvParameters);
+void mqtt5_app_start(void);
+void mqtt5_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data);
+void mqtt_init( void );
 
-void create_Accelerometer_task(void);
 
-#endif /* MAIN_ACCELEROMETER_APP_H_ */
+
+
+
+#endif /* MAIN_MQTT_APP_H_ */

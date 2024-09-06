@@ -1,8 +1,8 @@
 //-----------------------------------------------------------------
 ///
-///     \file MVEyE_1V0.c
+///     \file app_main.c
 ///
-///     \brief main application driver file
+///     \brief main application framework driver
 ///
 ///
 ///     \author       Chandrashekhar Venkatesh
@@ -34,22 +34,33 @@
 //  | | \| \__, |___ \__/ |__/ |___ .__/
 //
 //==============================================================================
+
 #include <stdio.h>
-#include <inttypes.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <string.h>
+#include "esp_system.h"
+#include "nvs_flash.h"
+#include "esp_event.h"
+#include "esp_netif.h"
+#include "protocol_examples_common.h"
 #include "esp_log.h"
-#include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_chip_info.h"
-#include "esp_flash.h"
-#include "esp_system.h"
-#include "leds.h"
 #include "soc/gpio_periph.h"
+#include "sdkconfig.h"
+#include "esp_flash.h"
+
 #include "lora_llc68.h"
 #include "lora_app.h"
-#include "driver/i2c.h"
-#include "Accelerometer_app.h"
-#include "accelerometer_KXTJ3.h"
+#include "leds.h"
+
+#include "accelero_driver.h"
+
+#include "MQTT_app.h"
+#include "mqtt_client.h"
+
 //==============================================================================
 //   __   ___  ___         ___  __
 //  |  \ |__  |__  | |\ | |__  /__`
@@ -57,17 +68,11 @@
 //
 //==============================================================================
 #define TAG "MVEyE_1V0"
+
 //==============================================================================
 //   __        __   __                          __   __
 //  / _` |    /  \ |__)  /\  |       \  /  /\  |__) /__`
 //  \__> |___ \__/ |__) /~~\ |___     \/  /~~\ |  \ .__/
-//
-//==============================================================================
-
-//==============================================================================
-//   __  ___      ___    __                __   __
-//  /__`  |   /\   |  | /  `    \  /  /\  |__) /__`
-//  .__/  |  /~~\  |  | \__,     \/  /~~\ |  \ .__/
 //
 //==============================================================================
 
@@ -118,8 +123,6 @@ void get_esp32_version(void)
 #endif
 }
 
-
-
 /*******************************************************************************
  * Function name  : app_main
  *
@@ -132,6 +135,7 @@ void get_esp32_version(void)
  * author         : Chandrashekhar Venkatesh
  * date           : 12AUG2024
  ******************************************************************************/
+ 
 void app_main(void)
 {
 	vTaskDelay(5000 / portTICK_PERIOD_MS); //Wait for proper debug messages to see.
@@ -141,7 +145,6 @@ void app_main(void)
     //LoRaAppInit();
     //create_lora_task();
     //accel7_i2cDriverInit();
-    create_Accelerometer_task();
 
     while(1)
     {
@@ -149,3 +152,4 @@ void app_main(void)
 		vTaskDelay(1000 / portTICK_PERIOD_MS);		
 	}
 }
+
