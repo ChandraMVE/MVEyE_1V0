@@ -1,3 +1,39 @@
+//-----------------------------------------------------------------
+///
+///     \file acceler_driver.c
+///
+///     \brief lora application framework driver
+///
+///
+///     \author       Naveen GS
+///
+///     Location:     India
+///
+///     Project Name: MVEyE_1V0
+///
+///     \date Created 09SEP2024
+///
+///      Tools:  EspressifIDE
+///      Device:   ESP32WROOM
+///		 Operating System: windows 10
+/// 	 Java Runtime Version: 17.0.11+9
+///      Eclipse Version: 4.30.0.v20231201-0110
+///      Eclipse CDT Version: 11.4.0.202309142347
+///      IDF Eclipse Plugin Version: 3.0.0.202406051940
+///      IDF Version:   5.3
+///
+/// Copyright © 2024 MicriVision Embedded Pvt Ltd
+///
+/// Confidential Property of MicroVision Embedded Pvt Ltd
+///
+//-----------------------------------------------------------------
+
+//==============================================================================
+//          __             __   ___  __
+//  | |\ | /  ` |    |  | |  \ |__  /__`
+//  | | \| \__, |___ \__/ |__/ |___ .__/
+//
+//==============================================================================
 #include "accelero_Driver.h"
 #include <stdio.h>
 #include "esp_log.h"
@@ -11,6 +47,12 @@
 #include <inttypes.h>
 #include "driver/gpio.h"
 
+//==============================================================================
+//   __   ___  ___         ___  __
+//  |  \ |__  |__  | |\ | |__  /__`
+//  |__/ |___ |    | | \| |___ .__/
+//
+//==============================================================================
 static const char *TAG = "accelero_driver";
 
 #define I2C_SDA 					GPIO_NUM_0
@@ -30,23 +72,51 @@ static const char *TAG = "accelero_driver";
 #define GPIO_INPUT_PIN_SEL  		(1ULL<<GPIO_INPUT_IO_34)
 #define ESP_INTR_FLAG_DEFAULT 		0
 
+//==============================================================================
+//   __        __   __                          __   __
+//  / _` |    /  \ |__)  /\  |       \  /  /\  |__) /__`
+//  \__> |___ \__/ |__) /~~\ |___     \/  /~~\ |  \ .__/
+//
+//==============================================================================
+bool detectedInterrupt = false; 	// Create variable for detection
+
+//==============================================================================
+//   __  ___      ___    __                __   __
+//  /__`  |   /\   |  | /  `    \  /  /\  |__) /__`
+//  .__/  |  /~~\  |  | \__,     \/  /~~\ |  \ .__/
+//
+//==============================================================================
+static QueueHandle_t gpio_evt_queue = NULL;
+
+/***********************************************************************************
+ * Function name  : setup_accelero_latched
+ *
+ * Description    : Initializing the accelerometer latched settings.
+ * Parameters     : None
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Keerthi Mallesh
+ * date           : 09SEP2024
+ ***********************************************************************************/
 void setup_accelero_latched()
 {
-	float sampleRate = 200; // HZ - Samples per second - 0.781, 1.563, 3.125, 6.25,
-	          				// 12.5, 25, 50, 100, 200, 400, 800, 1600Hz
-	          				// Sample rates ≥ 400Hz force High Resolution mode on
-	uint8_t accelRange = 2; // 14-bit Mode only supports 8g or 16g
-	bool highRes = true; // Set high resolution mode on
-	int16_t threshold = 0; // Sets wake-up threshold to default
-	uint8_t moveDur = 0; // Sets movement duration to default
-	uint8_t naDur = 0; // Sets non-activity duration to default
-	bool polarity = 1; // Sets INT pin polarity to active HIGH
-	float wuRate = -1; // Sets wake-up sample rate to IMU sample rate
-	bool latched = true; // Enables latched interrupt mode
-	bool pulsed = false; // Disables pulsed interrupt mode
-	bool motion = false; // Disables Motion Detection interrupt
-	bool dataReady = true; // Enables New Data Ready interrupt
-	bool intPin = true;//false; // Disables INT pin operation
+	float sampleRate = 200;			// HZ - Samples per second - 0.781, 1.563, 3.125, 6.25,
+	          						// 12.5, 25, 50, 100, 200, 400, 800, 1600Hz
+	          						// Sample rates ≥ 400Hz force High Resolution mode on
+	uint8_t accelRange = 2; 		// 14-bit Mode only supports 8g or 16g
+	bool highRes = true; 			// Set high resolution mode on
+	int16_t threshold = 0; 			// Sets wake-up threshold to default
+	uint8_t moveDur = 0; 			// Sets movement duration to default
+	uint8_t naDur = 0; 				// Sets non-activity duration to default
+	bool polarity = 1; 				// Sets INT pin polarity to active HIGH
+	float wuRate = -1; 				// Sets wake-up sample rate to IMU sample rate
+	bool latched = true; 			// Enables latched interrupt mode
+	bool pulsed = false; 			// Disables pulsed interrupt mode
+	bool motion = false; 			// Disables Motion Detection interrupt
+	bool dataReady = true; 			// Enables New Data Ready interrupt
+	bool intPin = true;				//false; // Disables INT pin operation
 
 
   vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -85,6 +155,18 @@ void setup_accelero_latched()
   }
 }
 
+/***********************************************************************************
+ * Function name  : app_main_accelero_latched
+ *
+ * Description    : Whenever the data ready pin is true the readings will be printed.
+ * Parameters     : None
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 void app_main_accelero_latched(void)
 {
 	  //ESP_LOGI(TAG, "inside accelero latched app\r\n");
@@ -132,7 +214,18 @@ String printAxis(wu_axis_t axis)
 }
 #endif
 
-static QueueHandle_t gpio_evt_queue = NULL;
+/***********************************************************************************
+ * Function name  : gpio_isr_handler
+ *
+ * Description    : gpio_isr_handler.
+ * Parameters     : pointer arguments
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 
 static void IRAM_ATTR gpio_isr_handler(void* arg)
 {
@@ -140,6 +233,18 @@ static void IRAM_ATTR gpio_isr_handler(void* arg)
     xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
 }
 
+/***********************************************************************************
+ * Function name  : accelero_gpio_interrupt_task
+ *
+ * Description    : accelero_gpio_interrupt_task.
+ * Parameters     : pointer arguments
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 static void accelero_gpio_interrupt_task(void* arg)
 {
     uint32_t io_num;
@@ -151,6 +256,18 @@ static void accelero_gpio_interrupt_task(void* arg)
     }
 }
 
+/*****************************************************************************************
+ * Function name  : config_accelero_interrupt
+ *
+ * Description    : Configuring the Accelerometer and creating the task of accelerometer.
+ * Parameters     : None
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ *****************************************************************************************/
 void config_accelero_interrupt()
 {
     //create a queue to handle gpio event from isr
@@ -186,20 +303,31 @@ void config_accelero_interrupt()
 
 }
 
-bool detectedInterrupt = false; // Create variable for detection
+/***********************************************************************************
+ * Function name  : setup_accelero_unlatched
+ *
+ * Description    : Configuring the Accelerometer Reading.
+ * Parameters     : pointer arguments
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 void setup_accelero_unlatched()
 {
 
 float sampleRate =
-    6.25; // HZ - Samples per second - 0.781, 1.563, 3.125, 6.25,
-          // 12.5, 25, 50, 100, 200, 400, 800, 1600Hz
-          // Sample rates ≥ 400Hz force High Resolution mode on
-uint8_t accelRange = 2; // 14-bit Mode only supports 8g or 16g
-bool highRes = true; // Set high resolution mode on
-int16_t threshold = 128; // Sets wake-up threshold to 0.5g
-uint8_t moveDur = 1; // Sets movement duration to 160ms
-uint8_t naDur = 10; // Sets non-activity duration to 1.6s
-bool polarity = 1; // Sets INT pin polarity to active HIGH(1); active low(0)
+    6.25; 					// HZ - Samples per second - 0.781, 1.563, 3.125, 6.25,
+          					// 12.5, 25, 50, 100, 200, 400, 800, 1600Hz
+          					// Sample rates ≥ 400Hz force High Resolution mode on
+uint8_t accelRange = 2; 	// 14-bit Mode only supports 8g or 16g
+bool highRes = true; 		// Set high resolution mode on
+int16_t threshold = 128; 	// Sets wake-up threshold to 0.5g
+uint8_t moveDur = 1; 		// Sets movement duration to 160ms
+uint8_t naDur = 10; 		// Sets non-activity duration to 1.6s
+bool polarity = 1; 			// Sets INT pin polarity to active HIGH(1); active low(0)
 
   if (begin(sampleRate, accelRange, highRes, 1) == IMU_SUCCESS)
   {
@@ -221,7 +349,7 @@ bool polarity = 1; // Sets INT pin polarity to active HIGH(1); active low(0)
   printf("Who am I? 0x%x\r\n", readData);
   } else {
     printf("Communication error, stopping.\r\n");
-    while(true); // stop running sketch if failed
+    while(true); 			// stop running sketch if failed
   }
 
   // 128 / 256 = 0.5g change in acceleration threshold
@@ -245,7 +373,7 @@ bool polarity = 1; // Sets INT pin polarity to active HIGH(1); active low(0)
     printf("Unlatched interrupt configured.\r\n");
   } else {
     printf("Communication error, stopping.\r\n");
-    while(true); // stop running sketch if failed
+    while(true); 		// stop running sketch if failed
   }
 
   // Disable the Z-axis for motion detection
@@ -254,10 +382,22 @@ bool polarity = 1; // Sets INT pin polarity to active HIGH(1); active low(0)
     printf("Disabled Z-axis from interrupt.");
   } else {
     printf("Communication error, stopping.");
-    while(true); // stop running sketch if failed
+    while(true); 		// stop running sketch if failed
   }
 }
 
+/***********************************************************************************
+ * Function name  : app_main_accelero_unlatched
+ *
+ * Description    : accelero_unlatched.
+ * Parameters     : None
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 void app_main_accelero_unlatched(void)
 {
   // This reads the state of Pin D1 to see if it's HIGH
@@ -271,7 +411,7 @@ void app_main_accelero_unlatched(void)
     printf(" ***********Interrupt fired!");
     printf(" Motion Direction: ");
     //printf(printAxis(motionDirection()));
-    resetInterrupt(); // reset direction bit
+    resetInterrupt(); 	// reset direction bit
     detectedInterrupt = true;
   }
   else if (gpio_get_level(GPIO_INPUT_IO_34) == 0 && detectedInterrupt)
@@ -279,17 +419,36 @@ void app_main_accelero_unlatched(void)
     detectedInterrupt = false;
   }
 }
-/**
- * @brief Read a sequence of bytes from a accelero sensor registers
- */
+
+/***********************************************************************************
+ * Function name  : i2c_accelero_register_read
+ *
+ * Description    : Accelerometer read register.
+ * Parameters     : register address, data pointer, length
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 static esp_err_t i2c_accelero_register_read(uint8_t reg_addr, uint8_t *data, size_t len)
 {
     return i2c_master_write_read_device(I2C_MASTER_NUM, ACCELERO_SENSOR_ADDR, &reg_addr, 1, data, len, I2C_MASTER_TIMEOUT_MS / portTICK_PERIOD_MS);
 }
 
-/**
- * @brief Write a byte to a accelero sensor register
- */
+/***********************************************************************************
+ * Function name  : i2c_accelero_register_write_byte
+ *
+ * Description    : Accelerometer write register by byte.
+ * Parameters     : register address, data.
+ * Returns        : Success/Fail.
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 static esp_err_t i2c_accelero_register_write_byte(uint8_t reg_addr, uint8_t data)
 {
     int ret;
@@ -300,9 +459,18 @@ static esp_err_t i2c_accelero_register_write_byte(uint8_t reg_addr, uint8_t data
     return ret;
 }
 
-/**
- * @brief i2c master initialization
- */
+/***********************************************************************************
+ * Function name  : i2c_master_init
+ *
+ * Description    : i2c_master_init.
+ * Parameters     : None
+ * Returns        : returnError
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 static esp_err_t i2c_master_init(void)
 {
     int i2c_master_port = I2C_MASTER_NUM;
@@ -324,9 +492,9 @@ static esp_err_t i2c_master_init(void)
 bool highRes   = false;
 bool debugMode = false;
 bool en14Bit   = false;
-float accelSampleRate; // Sample Rate - 0.781, 1.563, 3.125, 6.25, 12.5, 25,
-                       // 50, 100, 200, 400, 800, 1600Hz
-uint8_t accelRange;    // Accelerometer range = 2, 4, 8, 16g
+float accelSampleRate; 		// Sample Rate - 0.781, 1.563, 3.125, 6.25, 12.5, 25,
+                       		// 50, 100, 200, 400, 800, 1600Hz
+uint8_t accelRange;    		// Accelerometer range = 2, 4, 8, 16g
 
 kxtj3_status_t begin(float sampleRate, uint8_t accRange, bool highResSet,
                             bool debugSet)
@@ -389,14 +557,18 @@ kxtj3_status_t begin(float sampleRate, uint8_t accRange, bool highResSet,
   return returnError;
 }
 
-//****************************************************************************//
-//  readRegister_acceleroRegion
-//
-//  Parameters:
-//    *outputPointer -- Pass &variable (base address of) to save read data to
-//    offset -- register to read
-//    length -- number of bytes to read
-//****************************************************************************//
+/***********************************************************************************
+ * Function name  : readRegister_acceleroRegion
+ *
+ * Description    : readRegister_acceleroRegion.
+ * Parameters     : Output pointer, offset, length.
+ * Returns        : returnError
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 kxtj3_status_t readRegister_acceleroRegion(uint8_t *outputPointer, uint8_t offset,
                                          uint8_t length)
 {
@@ -407,13 +579,18 @@ kxtj3_status_t readRegister_acceleroRegion(uint8_t *outputPointer, uint8_t offse
   return returnError;
 }
 
-//****************************************************************************//
-//  readRegister_accelero
-//
-//  Parameters:
-//    *outputPointer -- Pass &variable (address of) to save read data to
-//    offset -- register to read
-//****************************************************************************//
+/***********************************************************************************
+ * Function name  : readRegister_accelero
+ *
+ * Description    : readRegister_accelero.
+ * Parameters     : Output pointer, offset.
+ * Returns        : returnError
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 kxtj3_status_t readRegister_accelero(uint8_t *outputPointer, uint8_t offset)
 {
   // Return value
@@ -430,13 +607,18 @@ kxtj3_status_t readRegister_accelero(uint8_t *outputPointer, uint8_t offset)
   return returnError;
 }
 
-//****************************************************************************//
-//  readRegister_acceleroInt16
-//
-//  Parameters:
-//    *outputPointer -- Pass &variable (base address of) to save read data to
-//    offset -- register to read
-//****************************************************************************//
+/***********************************************************************************
+ * Function name  : readRegister_acceleroInt16
+ *
+ * Description    : reading hte register of type integer 16 bit.
+ * Parameters     : Output pointer, offset.
+ * Returns        : returnError
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 kxtj3_status_t readRegister_acceleroInt16(int16_t *outputPointer, uint8_t offset)
 {
 	  kxtj3_status_t returnError = IMU_SUCCESS;
@@ -454,13 +636,18 @@ kxtj3_status_t readRegister_acceleroInt16(int16_t *outputPointer, uint8_t offset
   return returnError;
 }
 
-//****************************************************************************//
-//  writeRegister
-//
-//  Parameters:
-//    offset -- register to write
-//    dataToWrite -- 8 bit data to write to register
-//****************************************************************************//
+/***********************************************************************************
+ * Function name  : writeRegister
+ *
+ * Description    : Write Register.
+ * Parameters     : Offset, dataToWrite.
+ * Returns        : returnError
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 kxtj3_status_t writeRegister(uint8_t offset, uint8_t dataToWrite)
 {
   kxtj3_status_t returnError = IMU_SUCCESS;
@@ -470,12 +657,18 @@ kxtj3_status_t writeRegister(uint8_t offset, uint8_t dataToWrite)
   return returnError;
 }
 
-//****************************************************************************//
-//
-//  softwareReset
-//  Resets the device; recommended by Kionix on initial power-up (TN017)
-//
-//****************************************************************************//
+/***********************************************************************************
+ * Function name  : softwareReset
+ *
+ * Description    : softwareReset
+ * Parameters     : None.
+ * Returns        : returnError
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 kxtj3_status_t softwareReset(void)
 {
   kxtj3_status_t returnError = IMU_SUCCESS;
@@ -551,11 +744,18 @@ kxtj3_status_t softwareReset(void)
   return returnError;
 }
 
-//****************************************************************************//
-//
-//  Read axis acceleration as Float
-//
-//****************************************************************************//
+/***********************************************************************************
+ * Function name  : axisAccel
+ *
+ * Description    : Accelerometer reading based on the axis
+ * Parameters     : _axis.
+ * Returns        : outFloat
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 float axisAccel(axis_t _axis)
 {
   int16_t outRAW;
@@ -587,11 +787,11 @@ float axisAccel(axis_t _axis)
 
   // The LSB may contain garbage, so 0 any unused bits
   if (!highRes) {
-    outRAW &= 0b1111111100000000; // 8-bit mode
+    outRAW &= 0b1111111100000000; 		// 8-bit mode
   } else if (en14Bit) {
-    outRAW &= 0b1111111111111100; // 14-bit mode
+    outRAW &= 0b1111111111111100; 		// 14-bit mode
   } else {
-    outRAW &= 0b1111111111110000; // 12-bit mode
+    outRAW &= 0b1111111111110000; 		// 12-bit mode
   }
 
   float outFloat;
@@ -617,11 +817,18 @@ float axisAccel(axis_t _axis)
   return outFloat;
 }
 
-//****************************************************************************//
-//
-//  Place the accelerometer into/out of standby
-//
-//****************************************************************************//
+/***********************************************************************************
+ * Function name  : standby
+ *
+ * Description    : standby.
+ * Parameters     : _en.
+ * Returns        : Success/Fail
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 kxtj3_status_t standby(bool _en)
 {
   kxtj3_status_t returnError = IMU_SUCCESS;
@@ -637,7 +844,7 @@ kxtj3_status_t standby(bool _en)
   if (_en)
     _ctrl &= 0x7E;
   else
-    _ctrl |= (0x01 << 7); // disable standby-mode -> Bit7 = 1 = operating mode
+    _ctrl |= (0x01 << 7); 		// disable standby-mode -> Bit7 = 1 = operating mode
 
   returnError = writeRegister(KXTJ3_CTRL_REG1, _ctrl);
 
@@ -649,12 +856,18 @@ kxtj3_status_t standby(bool _en)
   return returnError;
 }
 
-//****************************************************************************//
-//
-//  Applies the start-up delay specified in Table 1 of the DataSheet
-//  Used when coming out of standby or softwareReset
-//
-//****************************************************************************//
+/***********************************************************************************
+ * Function name  : startupDelay
+ *
+ * Description    : startupDelay.
+ * Parameters     : None.
+ * Returns        : None.
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 void startupDelay(void)
 {
   if (highRes) {
@@ -692,15 +905,22 @@ void startupDelay(void)
   }
 }
 
-//****************************************************************************//
-//
-//  Apply settings passed to .begin();
-//
-//****************************************************************************//
+/***********************************************************************************
+ * Function name  : applySettings
+ *
+ * Description    : applySettings.
+ * Parameters     : None.
+ * Returns        : Success/Fail.
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 kxtj3_status_t applySettings(void)
 {
   kxtj3_status_t returnError = IMU_SUCCESS;
-  uint8_t dataToWrite        = 0; // Temporary variable
+  uint8_t dataToWrite        = 0; 				// Temporary variable
 
   // Note that to properly change the value of this register, the PC1 bit in
   // CTRL_REG1 must first be set to “0”.
@@ -786,18 +1006,25 @@ kxtj3_status_t applySettings(void)
   return returnError;
 }
 
-//****************************************************************************//
-//
-//  Enables 14-bit operation mode for 8g/16g acceleration ranges
-//
-//****************************************************************************//
+/***********************************************************************************
+ * Function name  : enable14Bit
+ *
+ * Description    : enable14Bit.
+ * Parameters     : accRange.
+ * Returns        : Success/Fail.
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 kxtj3_status_t enable14Bit(uint8_t accRange)
 {
   kxtj3_status_t returnError = IMU_SUCCESS;
-  uint8_t dataToWrite        = 0;        // Temporary variable
-  accelRange                 = accRange; // Set accelRange to new value
-  highRes                    = true;     // Make sure highRes is set to true
-  en14Bit                    = true;     // Set 14-bit check to true as well
+  uint8_t dataToWrite        = 0;        		// Temporary variable
+  accelRange                 = accRange; 		// Set accelRange to new value
+  highRes                    = true;     		// Make sure highRes is set to true
+  en14Bit                    = true;     		// Set 14-bit check to true as well
 
   // Note that to properly change the value of this register, the PC1 bit in
   // CTRL_REG1 must first be set to “0”.
@@ -836,10 +1063,19 @@ kxtj3_status_t enable14Bit(uint8_t accRange)
   return returnError;
 }
 
-//****************************************************************************//
-//  Configure interrupt, stop or move, threshold and duration
-//	Duration, steps and maximum values depend on the ODR chosen.
-//****************************************************************************//
+/***********************************************************************************
+ * Function name  : intConf
+ *
+ * Description    : intConf.
+ * Parameters     : threshold,moveDur,naDur,polarity,wuRate,latched,pulsed,motion,dataReady
+ *					intPin.
+ * Returns        : Success/Fail.
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 kxtj3_status_t intConf(int16_t threshold, uint8_t moveDur, uint8_t naDur,
                               bool polarity, float wuRate, bool latched,
                               bool pulsed, bool motion, bool dataReady,
@@ -1058,6 +1294,18 @@ kxtj3_status_t intConf(int16_t threshold, uint8_t moveDur, uint8_t naDur,
   return returnError;
 }
 
+/***********************************************************************************
+ * Function name  : intDisableAxis
+ *
+ * Description    : intDisableAxis.
+ * Parameters     : first,second,third,fourth,fifth.
+ * Returns        : Success/Fail.
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 kxtj3_status_t intDisableAxis(wu_axis_t first, wu_axis_t second,
                                      wu_axis_t third, wu_axis_t fourth,
                                      wu_axis_t fifth)
@@ -1136,6 +1384,18 @@ kxtj3_status_t intDisableAxis(wu_axis_t first, wu_axis_t second,
 }
 #endif
 
+/***********************************************************************************
+ * Function name  : dataReady
+ *
+ * Description    : dataReady.
+ * Parameters     : None.
+ * Returns        : Success/Fail.
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 bool dataReady(void)
 {
   uint8_t _reg1;
@@ -1150,6 +1410,18 @@ bool dataReady(void)
   }
 }
 
+/***********************************************************************************
+ * Function name  : motionDetected
+ *
+ * Description    : motionDetected.
+ * Parameters     : None.
+ * Returns        : Success/Fail.
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 bool motionDetected(void)
 {
   uint8_t _reg1;
@@ -1164,6 +1436,18 @@ bool motionDetected(void)
   }
 }
 
+/***********************************************************************************
+ * Function name  : motionDirection
+ *
+ * Description    : motionDirection.
+ * Parameters     : None.
+ * Returns        : Success/Fail.
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 wu_axis_t motionDirection(void)
 {
   uint8_t _reg1;
@@ -1186,6 +1470,18 @@ wu_axis_t motionDirection(void)
     return NONE;
 }
 
+/***********************************************************************************
+ * Function name  : resetInterrupt
+ *
+ * Description    : resetInterrupt.
+ * Parameters     : None.
+ * Returns        : Success/Fail.
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 09SEP2024
+ ***********************************************************************************/
 kxtj3_status_t resetInterrupt(void)
 {
   kxtj3_status_t returnError = IMU_SUCCESS;

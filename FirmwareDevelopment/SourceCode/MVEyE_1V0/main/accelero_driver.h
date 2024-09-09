@@ -1,24 +1,93 @@
+//-----------------------------------------------------------------
+///
+///     \file accelero_driver.h
+///
+///     \brief lora application framework driver header
+///
+///
+///     \author       Naveen GS
+///
+///     Location:     India
+///
+///     Project Name: MVEyE_1V0
+///
+///     \date Created 09SEP2024
+///
+///      Tools:  EspressifIDE
+///      Device:   ESP32WROOM
+///		 Operating System: windows 10
+/// 	 Java Runtime Version: 17.0.11+9
+///      Eclipse Version: 4.30.0.v20231201-0110
+///      Eclipse CDT Version: 11.4.0.202309142347
+///      IDF Eclipse Plugin Version: 3.0.0.202406051940
+///      IDF Version:   5.3
+///
+/// Copyright © 2024 MicriVision Embedded Pvt Ltd
+///
+/// Confidential Property of MicroVision Embedded Pvt Ltd
+///
+//-----------------------------------------------------------------
+
 #ifndef __KXTJ3_IMU_H1__
 #define __KXTJ3_IMU_H1__
 
+//==============================================================================
+//          __             __   ___  __
+//  | |\ | /  ` |    |  | |  \ |__  /__`
+//  | | \| \__, |___ \__/ |__/ |___ .__/
+//
+//==============================================================================
 #include <stdio.h>
 #include "esp_log.h"
 #include "driver/i2c.h"
 
+//==============================================================================
+//   __   ___  ___         ___  __
+//  |  \ |__  |__  | |\ | |__  /__`
+//  |__/ |___ |    | | \| |___ .__/
+//
+//==============================================================================
 // Print variable name
 #define getName(var) #var
 
-// Return values
-typedef enum {
-  IMU_SUCCESS,
-  IMU_HW_ERROR,
-  IMU_NOT_SUPPORTED,
-  IMU_GENERIC_ERROR,
-  IMU_OUT_OF_BOUNDS,
-  IMU_ALL_ONES_WARNING,
-  //...
-} kxtj3_status_t;
+// Device Registers
+#define KXTJ3_WHO_AM_I 0x0F
+#define KXTJ3_DCST_RESP                                                        \
+  0x0C // used to verify proper integrated circuit functionality.
+       // It always has a byte value of 0x55
+#define KXTJ3_SOFT_REST          0x7F // used during software reset
+#define KXTJ3_XOUT_L             0x06
+#define KXTJ3_XOUT_H             0x07
+#define KXTJ3_YOUT_L             0x08
+#define KXTJ3_YOUT_H             0x09
+#define KXTJ3_ZOUT_L             0x0A
+#define KXTJ3_ZOUT_H             0x0B
 
+#define KXTJ3_STATUS_REG         0x18
+#define KXTJ3_INT_SOURCE1        0x16
+#define KXTJ3_INT_SOURCE2        0x17
+#define KXTJ3_INT_REL            0x1A
+
+#define KXTJ3_CTRL_REG1          0x1B // *
+#define KXTJ3_CTRL_REG2          0x1D // *
+
+#define KXTJ3_INT_CTRL_REG1      0x1E // *
+#define KXTJ3_INT_CTRL_REG2      0x1F // *
+
+#define KXTJ3_DATA_CTRL_REG      0x21 // *
+#define KXTJ3_WAKEUP_COUNTER     0x29 // *
+#define KXTJ3_NA_COUNTER         0x2A // *
+#define KXTJ3_SELF_TEST          0x3A // *
+
+#define KXTJ3_WAKEUP_THRESHOLD_H 0x6A // *
+#define KXTJ3_WAKEUP_THRESHOLD_L 0x6B // *
+
+//==============================================================================
+//  ___      __   ___  __   ___  ___  __
+//   |  \ / |__) |__  |  \ |__  |__  /__`
+//   |   |  |    |___ |__/ |___ |    .__/
+//
+//==============================================================================
 typedef enum {
   X = 0,
   Y,
@@ -36,6 +105,30 @@ typedef enum {
   NONE  = 64,
 } wu_axis_t;
 
+// Return values
+typedef enum {
+  IMU_SUCCESS,
+  IMU_HW_ERROR,
+  IMU_NOT_SUPPORTED,
+  IMU_GENERIC_ERROR,
+  IMU_OUT_OF_BOUNDS,
+  IMU_ALL_ONES_WARNING,
+  //...
+} kxtj3_status_t;
+
+//==============================================================================
+//   __        __   __                          __   __
+//  / _` |    /  \ |__)  /\  |       \  /  /\  |__) /__`
+//  \__> |___ \__/ |__) /~~\ |___     \/  /~~\ |  \ .__/
+//
+//==============================================================================
+
+//==============================================================================
+//   __        __          __      ___            __  ___    __        __
+//  |__) |  | |__) |    | /  `    |__  |  | |\ | /  `  |  | /  \ |\ | /__`
+//  |    \__/ |__) |___ | \__,    |    \__/ | \| \__,  |  | \__/ | \| .__/
+//
+//==============================================================================
   /*
   Accelerometer range = 2, 4, 8, 16g
   Sample Rate - 0.781, 1.563, 3.125, 6.25, 12.5, 25, 50, 100, 200, 400, 800,
@@ -128,37 +221,7 @@ void app_main_accelero_latched(void);
 
 void setup_accelero_unlatched();
 void app_main_accelero_unlatched(void);
-// Device Registers
-#define KXTJ3_WHO_AM_I 0x0F
-#define KXTJ3_DCST_RESP                                                        \
-  0x0C // used to verify proper integrated circuit functionality.
-       // It always has a byte value of 0x55
-#define KXTJ3_SOFT_REST          0x7F // used during software reset
-#define KXTJ3_XOUT_L             0x06
-#define KXTJ3_XOUT_H             0x07
-#define KXTJ3_YOUT_L             0x08
-#define KXTJ3_YOUT_H             0x09
-#define KXTJ3_ZOUT_L             0x0A
-#define KXTJ3_ZOUT_H             0x0B
 
-#define KXTJ3_STATUS_REG         0x18
-#define KXTJ3_INT_SOURCE1        0x16
-#define KXTJ3_INT_SOURCE2        0x17
-#define KXTJ3_INT_REL            0x1A
-
-#define KXTJ3_CTRL_REG1          0x1B // *
-#define KXTJ3_CTRL_REG2          0x1D // *
-
-#define KXTJ3_INT_CTRL_REG1      0x1E // *
-#define KXTJ3_INT_CTRL_REG2      0x1F // *
-
-#define KXTJ3_DATA_CTRL_REG      0x21 // *
-#define KXTJ3_WAKEUP_COUNTER     0x29 // *
-#define KXTJ3_NA_COUNTER         0x2A // *
-#define KXTJ3_SELF_TEST          0x3A // *
-
-#define KXTJ3_WAKEUP_THRESHOLD_H 0x6A // *
-#define KXTJ3_WAKEUP_THRESHOLD_L 0x6B // *
 
 // * Note that to properly change the value of this register, the PC1 bit in
 // CTRL_REG1 must first be set to “0”.
