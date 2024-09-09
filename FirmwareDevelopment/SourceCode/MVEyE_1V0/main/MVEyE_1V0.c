@@ -142,12 +142,14 @@ void app_main(void)
     get_esp32_version();
     init_leds();
     create_leds_task();
-    //LoRaAppInit();
-    //create_lora_task();
+    LoRaAppInit();
+    create_lora_task();
     //accel7_i2cDriverInit();
+    mqtt_init();
 
     while(1)
     {
+		create_mqtt_task();
 		ESP_LOGD(TAG,"MVEyE active");
 		vTaskDelay(1000 / portTICK_PERIOD_MS);		
 	}

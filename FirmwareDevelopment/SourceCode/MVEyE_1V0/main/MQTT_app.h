@@ -70,7 +70,7 @@ void mqtt_task(void *pvParameters);
 void mqtt5_app_start(void);
 void mqtt5_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data);
 void mqtt_init( void );
-
+void create_mqtt_task( void );
 
 
 

@@ -1493,3 +1493,4 @@ kxtj3_status_t resetInterrupt(void)
 
   return returnError;
 }
+	
