@@ -414,5 +414,7 @@ void mqtt_init( void )
      */
      
     ESP_ERROR_CHECK(example_connect());
+    
+    mqtt5_app_start();
 
 }

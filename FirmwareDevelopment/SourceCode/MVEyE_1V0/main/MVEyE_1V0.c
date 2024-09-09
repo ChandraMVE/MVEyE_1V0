@@ -149,7 +149,7 @@ void app_main(void)
 
     while(1)
     {
-		create_mqtt_task();
+		//create_mqtt_task();
 		ESP_LOGD(TAG,"MVEyE active");
 		vTaskDelay(1000 / portTICK_PERIOD_MS);		
 	}
