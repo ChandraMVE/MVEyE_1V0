@@ -49,8 +49,8 @@
 //==============================================================================
 #define TAG "LORA_APP"
 #define TIMEOUT 100
-#define PING 0
-#define PONG 1
+#define PING 1
+#define PONG 0
 #define DEVICE_ID 001
 #define DESTINATION_DEVICE_ID 003
 #define MAX_HOPS 5

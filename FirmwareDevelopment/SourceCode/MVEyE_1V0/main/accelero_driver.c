@@ -68,10 +68,6 @@ static const char *TAG = "accelero_driver";
 
 #define ACCELERO_SENSOR_ADDR        0x0F        /*!< Slave address of the accelero sensor */
 
-#define GPIO_INPUT_IO_34    		GPIO_NUM_34
-#define GPIO_INPUT_PIN_SEL  		(1ULL<<GPIO_INPUT_IO_34)
-#define ESP_INTR_FLAG_DEFAULT 		0
-
 //==============================================================================
 //   __        __   __                          __   __
 //  / _` |    /  \ |__)  /\  |       \  /  /\  |__) /__`
@@ -79,14 +75,6 @@ static const char *TAG = "accelero_driver";
 //
 //==============================================================================
 bool detectedInterrupt = false; 	// Create variable for detection
-
-//==============================================================================
-//   __  ___      ___    __                __   __
-//  /__`  |   /\   |  | /  `    \  /  /\  |__) /__`
-//  .__/  |  /~~\  |  | \__,     \/  /~~\ |  \ .__/
-//
-//==============================================================================
-static QueueHandle_t gpio_evt_queue = NULL;
 
 /***********************************************************************************
  * Function name  : setup_accelero_latched
@@ -213,95 +201,6 @@ String printAxis(wu_axis_t axis)
   }
 }
 #endif
-
-/***********************************************************************************
- * Function name  : gpio_isr_handler
- *
- * Description    : gpio_isr_handler.
- * Parameters     : pointer arguments
- * Returns        : None
- *
- * Known Issues   :
- * Note           :
- * author         : Naveen GS
- * date           : 09SEP2024
- ***********************************************************************************/
-
-static void IRAM_ATTR gpio_isr_handler(void* arg)
-{
-    uint32_t gpio_num = (uint32_t) arg;
-    xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
-}
-
-/***********************************************************************************
- * Function name  : accelero_gpio_interrupt_task
- *
- * Description    : accelero_gpio_interrupt_task.
- * Parameters     : pointer arguments
- * Returns        : None
- *
- * Known Issues   :
- * Note           :
- * author         : Naveen GS
- * date           : 09SEP2024
- ***********************************************************************************/
-static void accelero_gpio_interrupt_task(void* arg)
-{
-    uint32_t io_num;
-    for (;;) {
-        if (xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
-            printf("GPIO[%"PRIu32"] intr, val: %d\n", io_num, gpio_get_level(io_num));
-            printf(" Acceleration X, Y, Z = %f %f %f\r\n", axisAccel(X), axisAccel(Y), axisAccel(Z));
-        }
-    }
-}
-
-/*****************************************************************************************
- * Function name  : config_accelero_interrupt
- *
- * Description    : Configuring the Accelerometer and creating the task of accelerometer.
- * Parameters     : None
- * Returns        : None
- *
- * Known Issues   :
- * Note           :
- * author         : Naveen GS
- * date           : 09SEP2024
- *****************************************************************************************/
-void config_accelero_interrupt()
-{
-    //create a queue to handle gpio event from isr
-    gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
-    //start gpio task
-    xTaskCreate(accelero_gpio_interrupt_task, "accelero_gpio_interrupt_task", 2048, NULL, 10, NULL);
-    	
-    //zero-initialize the config structure.
-    gpio_config_t io_conf = {};
-    
-    //interrupt of rising edge
-    io_conf.intr_type = GPIO_INTR_POSEDGE;
-    //bit mask of the pins
-    io_conf.pin_bit_mask = GPIO_INPUT_PIN_SEL;
-    //set as input mode
-    io_conf.mode = GPIO_MODE_INPUT;
-    //enable pull-up mode
-    io_conf.pull_up_en = 1;
-    gpio_config(&io_conf);
-
-    //change gpio interrupt type for one pin
-    gpio_set_intr_type(GPIO_INPUT_IO_34, GPIO_INTR_ANYEDGE);
-    
-        //install gpio isr service
-    gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
-    //hook isr handler for specific gpio pin
-    gpio_isr_handler_add(GPIO_INPUT_IO_34, gpio_isr_handler, (void*) GPIO_INPUT_IO_34);
-
-    //remove isr handler for gpio number.
-    gpio_isr_handler_remove(GPIO_INPUT_IO_34);
-    //hook isr handler for specific gpio pin again
-    gpio_isr_handler_add(GPIO_INPUT_IO_34, gpio_isr_handler, (void*) GPIO_INPUT_IO_34);
-
-}
 
 /***********************************************************************************
  * Function name  : setup_accelero_unlatched

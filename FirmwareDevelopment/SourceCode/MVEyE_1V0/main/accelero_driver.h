@@ -50,6 +50,12 @@
 // Print variable name
 #define getName(var) #var
 
+#define GPIO_INPUT_IO_34    		GPIO_NUM_34
+#define GPIO_INPUT_PIN_SEL  		(1ULL<<GPIO_INPUT_IO_34)
+#define ESP_INTR_FLAG_DEFAULT 		0
+
+#define GPIO_INTERRUPT_PIN 34  		// GPIO number for the interrupt pin
+
 // Device Registers
 #define KXTJ3_WHO_AM_I 0x0F
 #define KXTJ3_DCST_RESP                                                        \
@@ -213,8 +219,6 @@ typedef enum {
 
   // Start-up delay for coming out of standby
   void startupDelay(void);
-
-void config_accelero_interrupt();
 
 void setup_accelero_latched();
 void app_main_accelero_latched(void);

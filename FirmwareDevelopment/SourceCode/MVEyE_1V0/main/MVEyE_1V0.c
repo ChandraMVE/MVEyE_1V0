@@ -57,6 +57,7 @@
 #include "leds.h"
 
 #include "accelero_driver.h"
+#include "accelero_app.h"
 
 #include "MQTT_app.h"
 #include "mqtt_client.h"
@@ -140,16 +141,20 @@ void app_main(void)
 {
 	vTaskDelay(5000 / portTICK_PERIOD_MS); //Wait for proper debug messages to see.
     get_esp32_version();
+    
     init_leds();
     create_leds_task();
+    
     LoRaAppInit();
     create_lora_task();
-    //accel7_i2cDriverInit();
+    
+    create_Accelerometer_task();
+    
     mqtt_init();
-
+	//create_mqtt_task();
+    
     while(1)
     {
-		//create_mqtt_task();
 		ESP_LOGD(TAG,"MVEyE active");
 		vTaskDelay(1000 / portTICK_PERIOD_MS);		
 	}
