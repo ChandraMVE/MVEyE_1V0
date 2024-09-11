@@ -1,17 +1,17 @@
 //-----------------------------------------------------------------
 ///
-///     \file lora_app.h
+///     \file mqtt_app.h
 ///
-///     \brief lora application framework driver header
+///     \brief mqtt application framework driver header
 ///
 ///
-///     \author       Chandrashekhar Venkatesh
+///     \author       Keerthi Mallesh
 ///
 ///     Location:     India
 ///
-///     Project Name: MVEyE_1V0
+///     Project Name: MQTT_app.h
 ///
-///     \date Created 20AUG2024
+///     \date Created 05SEP2024
 ///
 ///      Tools:  EspressifIDE
 ///      Device:   ESP32WROOM
@@ -28,8 +28,8 @@
 ///
 //-----------------------------------------------------------------
 
-#ifndef MAIN_LORA_APP_H_
-#define MAIN_LORA_APP_H_
+#ifndef MAIN_MQTT_APP_H_
+#define MAIN_MQTT_APP_H_
 
 //==============================================================================
 //          __             __   ___  __
@@ -44,12 +44,7 @@
 //  |__/ |___ |    | | \| |___ .__/
 //
 //==============================================================================
-#define CONFIG_868MHZ	1
-#define CONFIG_USE_TCXO	0
-#define CONFIF_ADVANCED 0
-#define CONFIG_SF_RATE	7
-#define CONFIG_BANDWIDTH	4
-#define CONFIG_CODING_RATE	1
+
 //==============================================================================
 //  ___      __   ___  __   ___  ___  __
 //   |  \ / |__) |__  |  \ |__  |__  /__`
@@ -70,7 +65,14 @@
 //  |    \__/ |__) |___ | \__,    |    \__/ | \| \__,  |  | \__/ | \| .__/
 //
 //==============================================================================
-void create_lora_task(void);
-void LoRaAppInit(void);
+void create_mqtt_task(void);
+void mqtt_task(void *pvParameters);
+void mqtt5_app_start(void);
+void mqtt5_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data);
+void mqtt_init( void );
+void create_mqtt_task( void );
 
-#endif /* MAIN_LORA_APP_H_ */
+
+
+
+#endif /* MAIN_MQTT_APP_H_ */

@@ -1,17 +1,17 @@
 //-----------------------------------------------------------------
 ///
-///     \file accelerometer_KXTJ3.h
+///     \file loraMesh.h
 ///
-///     \brief accelerometer driver code support header
+///     \brief lora application framework driver header
 ///
 ///
-///     \author       Chandrashekhar Venkatesh
+///     \author       Keerthi Mallesh
 ///
 ///     Location:     India
 ///
 ///     Project Name: MVEyE_1V0
 ///
-///     \date Created 20AUG2024
+///     \date Created 10SEP2024
 ///
 ///      Tools:  EspressifIDE
 ///      Device:   ESP32WROOM
@@ -27,9 +27,8 @@
 /// Confidential Property of MicroVision Embedded Pvt Ltd
 ///
 //-----------------------------------------------------------------
-
-#ifndef MAIN_ACCELEROMETER_KXTJ3_H_
-#define MAIN_ACCELEROMETER_KXTJ3_H_
+#ifndef MAIN_LORAMESH_H_
+#define MAIN_LORAMESH_H_
 
 //==============================================================================
 //          __             __   ___  __
@@ -38,16 +37,19 @@
 //
 //==============================================================================
 
+#include <stdint.h>
+#include <stdbool.h>
+
 //==============================================================================
 //   __   ___  ___         ___  __
 //  |  \ |__  |__  | |\ | |__  /__`
 //  |__/ |___ |    | | \| |___ .__/
 //
 //==============================================================================
-#define I2C_SDA 	GPIO_NUM_0
-#define I2C_SCL		GPIO_NUM_4	
-#define ACC_INTn	GPIO_NUM_34
-#define ADDR_KXTJ3_7BIT	0x0F
+
+#define MAX_NODES       10
+#define MAX_HOP_COUNT   5
+
 //==============================================================================
 //  ___      __   ___  __   ___  ___  __
 //   |  \ / |__) |__  |  \ |__  |__  /__`
@@ -61,7 +63,14 @@
 //  \__> |___ \__/ |__) /~~\ |___     \/  /~~\ |  \ .__/
 //
 //==============================================================================
-
+typedef struct {
+	
+    uint8_t senderID;
+    uint8_t destinationID;
+    uint8_t hopCount;
+    char payload[256];  // Adjust size as needed
+    
+} MeshPacket;
 
 //==============================================================================
 //   __        __          __      ___            __  ___    __        __
@@ -70,6 +79,8 @@
 //
 //==============================================================================
 
+void mesh_init(uint8_t device_id);
+bool mesh_send( void );
+void mesh_receive(void *pvParameters);
 
-
-#endif /* MAIN_ACCELEROMETER_KXTJ3_H_ */
+#endif /* MAIN_LORAMESH_H_ */
