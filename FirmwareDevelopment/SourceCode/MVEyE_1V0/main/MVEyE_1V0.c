@@ -1,8 +1,8 @@
 //-----------------------------------------------------------------
 ///
-///     \file MVEyE_1V0.c
+///     \file app_main.c
 ///
-///     \brief main application driver file
+///     \brief main application framework driver
 ///
 ///
 ///     \author       Chandrashekhar Venkatesh
@@ -34,19 +34,33 @@
 //  | | \| \__, |___ \__/ |__/ |___ .__/
 //
 //==============================================================================
+
 #include <stdio.h>
-#include <inttypes.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <string.h>
+#include "esp_system.h"
+#include "nvs_flash.h"
+#include "esp_event.h"
+#include "esp_netif.h"
+#include "protocol_examples_common.h"
 #include "esp_log.h"
-#include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_chip_info.h"
-#include "esp_flash.h"
-#include "esp_system.h"
-#include "leds.h"
 #include "soc/gpio_periph.h"
+#include "sdkconfig.h"
+#include "esp_flash.h"
+
 #include "lora_llc68.h"
 #include "lora_app.h"
+#include "leds.h"
+
+#include "accelero_driver.h"
+#include "accelero_app.h"
+
+#include "MQTT_app.h"
+#include "mqtt_client.h"
 
 //==============================================================================
 //   __   ___  ___         ___  __
@@ -55,17 +69,11 @@
 //
 //==============================================================================
 #define TAG "MVEyE_1V0"
+
 //==============================================================================
 //   __        __   __                          __   __
 //  / _` |    /  \ |__)  /\  |       \  /  /\  |__) /__`
 //  \__> |___ \__/ |__) /~~\ |___     \/  /~~\ |  \ .__/
-//
-//==============================================================================
-
-//==============================================================================
-//   __  ___      ___    __                __   __
-//  /__`  |   /\   |  | /  `    \  /  /\  |__) /__`
-//  .__/  |  /~~\  |  | \__,     \/  /~~\ |  \ .__/
 //
 //==============================================================================
 
@@ -128,18 +136,27 @@ void get_esp32_version(void)
  * author         : Chandrashekhar Venkatesh
  * date           : 12AUG2024
  ******************************************************************************/
+ 
 void app_main(void)
 {
 	vTaskDelay(5000 / portTICK_PERIOD_MS); //Wait for proper debug messages to see.
     get_esp32_version();
+    
     init_leds();
     create_leds_task();
+    
     LoRaAppInit();
     create_lora_task();
-
+    
+    create_Accelerometer_task();
+    
+    mqtt_init();
+	//create_mqtt_task();
+    
     while(1)
     {
 		ESP_LOGD(TAG,"MVEyE active");
 		vTaskDelay(1000 / portTICK_PERIOD_MS);		
 	}
 }
+
