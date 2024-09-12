@@ -1,8 +1,8 @@
 //-----------------------------------------------------------------
 ///
-///     \file accelerometer_KXTJ3.h
+///     \file Accelerometer_app.h
 ///
-///     \brief accelerometer driver code support header
+///     \brief Accelerometer application framework driver header
 ///
 ///
 ///     \author       Chandrashekhar Venkatesh
@@ -28,8 +28,16 @@
 ///
 //-----------------------------------------------------------------
 
+<<<<<<< HEAD:FirmwareDevelopment/SourceCode/MVEyE_1V0/main/accelerometer_KXTJ3.h
 #ifndef MAIN_ACCELEROMETER_KXTJ3_H_
 #define MAIN_ACCELEROMETER_KXTJ3_H_
+=======
+
+#ifndef MAIN_ACCELEROMETER_APP_H_
+#define MAIN_ACCELEROMETER_APP_H_
+
+
+>>>>>>> 8dcd53a713103c96d5b910f1859a983916ca348a:FirmwareDevelopment/SourceCode/MVEyE_1V0/main/accelero_app.h
 #include "stdint.h"
 #include "driver/i2c_master.h"
 //==============================================================================
@@ -46,12 +54,15 @@ extern i2c_master_dev_handle_t dev_handle;
 //
 //==============================================================================
 
+<<<<<<< HEAD:FirmwareDevelopment/SourceCode/MVEyE_1V0/main/accelerometer_KXTJ3.h
 #define PortNum     0
 #define I2C_SDA 	GPIO_NUM_0
 #define I2C_SCL		GPIO_NUM_4	
 #define ACC_INTn	GPIO_NUM_34
 #define ADDR_KXTJ3_7BIT	0x0F
                          
+=======
+>>>>>>> 8dcd53a713103c96d5b910f1859a983916ca348a:FirmwareDevelopment/SourceCode/MVEyE_1V0/main/accelero_app.h
 //==============================================================================
 //  ___      __   ___  __   ___  ___  __
 //   |  \ / |__) |__  |  \ |__  |__  /__`
@@ -193,6 +204,7 @@ extern const uint8_t _ACCEL7_RANGE_16g;
  */
 void accel7_i2cDriverInit(void);                     
 
+<<<<<<< HEAD:FirmwareDevelopment/SourceCode/MVEyE_1V0/main/accelerometer_KXTJ3.h
 /**
  * @brief Functions for write one byte in register
  *
@@ -236,6 +248,8 @@ uint8_t accel7_init(uint8_t dataRes, uint8_t range);
  * @retval Interrupt state
  */
 uint8_t accel7_getInterruptState(uint8_t pin);
+=======
+void create_Accelerometer_task(void) ;
+>>>>>>> 8dcd53a713103c96d5b910f1859a983916ca348a:FirmwareDevelopment/SourceCode/MVEyE_1V0/main/accelero_app.h
 
-
-#endif /* MAIN_ACCELEROMETER_KXTJ3_H_ */
+#endif /* MAIN_ACCELEROMETER_APP_H_ */

@@ -56,8 +56,13 @@
 #include "lora_app.h"
 #include "leds.h"
 
+<<<<<<< HEAD
 #include "Accelerometer_app.h"
 #include "accelerometer_KXTJ3.h"
+=======
+#include "accelero_driver.h"
+#include "accelero_app.h"
+>>>>>>> 8dcd53a713103c96d5b910f1859a983916ca348a
 
 #include "MQTT_app.h"
 #include "mqtt_client.h"
@@ -140,10 +145,15 @@ void get_esp32_version(void)
 void app_main(void)
 {
 	vTaskDelay(5000 / portTICK_PERIOD_MS); //Wait for proper debug messages to see.
+<<<<<<< HEAD
+=======
+    get_esp32_version();
+>>>>>>> 8dcd53a713103c96d5b910f1859a983916ca348a
     
     init_leds();
     create_leds_task();
     
+<<<<<<< HEAD
     accel7_i2cDriverInit();
     create_Accelerometer_task();
     
@@ -153,9 +163,21 @@ void app_main(void)
 	create_mqtt_task();   
 	
 	    while(1)
+=======
+    LoRaAppInit();
+    create_lora_task();
+    
+    create_Accelerometer_task();
+    
+    mqtt_init();
+	//create_mqtt_task();
+    
+    while(1)
+>>>>>>> 8dcd53a713103c96d5b910f1859a983916ca348a
     {
 		ESP_LOGD(TAG,"MVEyE active");
 		vTaskDelay(1000 / portTICK_PERIOD_MS);		
 	} 
 
 }
+

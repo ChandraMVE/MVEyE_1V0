@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 //-----------------------------------------------------------------
+=======
+	//-----------------------------------------------------------------
+>>>>>>> 8dcd53a713103c96d5b910f1859a983916ca348a
 ///
 ///     \file MQTT_app.c
 ///
@@ -63,7 +67,11 @@
 //  \__> |___ \__/ |__) /~~\ |___     \/  /~~\ |  \ .__/
 //
 //==============================================================================
+<<<<<<< HEAD
 char mqtt_message[256];
+=======
+char mqtt_message[256] = "data_3";		//! In this we can add LoRa reading. 
+>>>>>>> 8dcd53a713103c96d5b910f1859a983916ca348a
 
 //==============================================================================
 //   __  ___      ___    __                __   __
@@ -72,6 +80,21 @@ char mqtt_message[256];
 //
 //==============================================================================
 
+<<<<<<< HEAD
+=======
+/***********************************************************************************
+ * Function name  : log_error_if_nonzero
+ *
+ * Description    : error message will be shown if there is nonzero.
+ * Parameters     : message pointer, base, error code
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Keerthi Mallesh
+ * date           : 06SEP2024
+ ***********************************************************************************/
+>>>>>>> 8dcd53a713103c96d5b910f1859a983916ca348a
 void log_error_if_nonzero(const char *message, int error_code)
 {
     if (error_code != 0) {
@@ -120,6 +143,21 @@ esp_mqtt5_disconnect_property_config_t disconnect_property = {
     .disconnect_reason = 0,
 };
 
+<<<<<<< HEAD
+=======
+/***********************************************************************************
+ * Function name  : print_user_property
+ *
+ * Description    : initialized user property will be printed.
+ * Parameters     : user property
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Keerthi Mallesh
+ * date           : 06SEP2024
+ ***********************************************************************************/
+>>>>>>> 8dcd53a713103c96d5b910f1859a983916ca348a
 void print_user_property(mqtt5_user_property_handle_t user_property)
 {
     if (user_property) {
@@ -143,7 +181,11 @@ void print_user_property(mqtt5_user_property_handle_t user_property)
  * Function name  : mqtt_event_handler
  *
  * Description    : mqtt5 event handler.
+<<<<<<< HEAD
  * Parameters     : handler arguments pointer, base, evvent_id, event data pointer
+=======
+ * Parameters     : handler arguments pointer, base, event_id, event data pointer
+>>>>>>> 8dcd53a713103c96d5b910f1859a983916ca348a
  * Returns        : None
  *
  * Known Issues   :
@@ -344,6 +386,7 @@ void mqtt5_app_start(void)
  
 void mqtt_task(void *pvParameters)
 {
+<<<<<<< HEAD
 
     ESP_LOGI(TAG, "[APP] Startup..");
     ESP_LOGI(TAG, "[APP] Free memory: %" PRIu32 " bytes", esp_get_free_heap_size());
@@ -367,6 +410,8 @@ void mqtt_task(void *pvParameters)
      */
     ESP_ERROR_CHECK(example_connect());
     
+=======
+>>>>>>> 8dcd53a713103c96d5b910f1859a983916ca348a
     mqtt5_app_start();
 }
 
@@ -388,4 +433,36 @@ void create_mqtt_task( void )
 	xTaskCreate(&mqtt_task, "mqtt_task", 1024*4, NULL, 20, NULL);
 }
 
+<<<<<<< HEAD
 
+=======
+void mqtt_init( void )
+{
+	
+	ESP_LOGI(TAG, "[APP] Startup..");
+    ESP_LOGI(TAG, "[APP] Free memory: %" PRIu32 " bytes", esp_get_free_heap_size());
+    ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
+
+    esp_log_level_set("*", ESP_LOG_INFO);
+    esp_log_level_set("mqtt_client", ESP_LOG_VERBOSE);
+    esp_log_level_set("mqtt_example", ESP_LOG_VERBOSE);
+    esp_log_level_set("transport_base", ESP_LOG_VERBOSE);
+    esp_log_level_set("esp-tls", ESP_LOG_VERBOSE);
+    esp_log_level_set("transport", ESP_LOG_VERBOSE);
+    esp_log_level_set("outbox", ESP_LOG_VERBOSE);
+    
+    ESP_ERROR_CHECK(nvs_flash_init());
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+
+    /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
+     * Read "Establishing Wi-Fi or Ethernet Connection" section in
+     * examples/protocols/README.md for more information about this function.
+     */
+     
+    ESP_ERROR_CHECK(example_connect());
+    
+    mqtt5_app_start();
+
+}
+>>>>>>> 8dcd53a713103c96d5b910f1859a983916ca348a
