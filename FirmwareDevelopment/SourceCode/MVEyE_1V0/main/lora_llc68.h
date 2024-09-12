@@ -438,7 +438,7 @@
 #define	LLCC68_BUSY			CONFIG_BUSY_GPIO
 #define	LLCC68_TXEN			CONFIG_TXEN_GPIO
 #define	LLCC68_RXEN			CONFIG_RXEN_GPIO
-
+#define LLCC68_RESET_SPI    GPIO_NUM_4
 //==============================================================================
 //  ___      __   ___  __   ___  ___  __
 //   |  \ / |__) |__  |  \ |__  |__  /__`
@@ -518,12 +518,18 @@ void     ReadCommand(uint8_t cmd, uint8_t* data, uint8_t numBytes);
 void     SPItransfer(uint8_t cmd, bool write, uint8_t* dataOut, uint8_t* dataIn, uint8_t numBytes, bool waitForBusy);
 void     LoRaError(int error);
 
+void 	init_spi();
+void 	llcc68_reset();
+void 	get_llcc68_version();
+void 	get_llcc68_deveui();
+
 #if 0
 void lora_spi_init(void);
 void lora_io_init(void);
 void lora_spi_remove(void);
- void lora_read_version_register(void);
+void lora_read_version_register(void);
 #endif
+
 
 
 #endif /* MAIN_LORA_LLC68_H_ */

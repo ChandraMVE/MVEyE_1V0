@@ -1639,3 +1639,140 @@ void ReadCommand(uint8_t cmd, uint8_t* data, uint8_t numBytes) {
 	// wait for BUSY to go low
 	WaitForIdle(BUSY_WAIT);
 }
+
+/*******************************************************************************
+ * Function name  : init_spi
+ *
+ * Description    : spi_init function
+ * Parameters     : None
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Keerthi Mallesh 
+ * date           : 12SEP2024
+ ******************************************************************************/
+void init_spi() {
+    esp_err_t ret;
+
+    spi_bus_config_t buscfg = {
+        .miso_io_num = CONFIG_MISO_GPIO,
+        .mosi_io_num = CONFIG_MOSI_GPIO,
+        .sclk_io_num = CONFIG_SCLK_GPIO,
+        .quadwp_io_num = -1,
+        .quadhd_io_num = -1,
+        .max_transfer_sz = 4096,
+    };
+
+    ret = spi_bus_initialize(SPI2_HOST, &buscfg, SPI_DMA_CH_AUTO);
+    ESP_ERROR_CHECK(ret);
+
+    spi_device_interface_config_t devcfg = {
+        .clock_speed_hz = 1 * 1000 * 1000,   
+        .mode = 0,                           
+        .spics_io_num = LORA_CSn,            
+        .queue_size = 1,
+    };
+
+    ret = spi_bus_add_device(SPI2_HOST, &devcfg, &lora_spi);
+    ESP_ERROR_CHECK(ret);
+}
+
+/*******************************************************************************
+ * Function name  : llcc68_reset
+ *
+ * Description    : llcc68_reset function 
+ * Parameters     : None
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Keerthi Mallesh 
+ * date           : 12SEP2024
+ ******************************************************************************/
+void llcc68_reset() {
+	
+    gpio_set_direction(LLCC68_RESET_SPI, GPIO_MODE_OUTPUT);
+    gpio_set_level(LLCC68_RESET_SPI, 0);  
+    vTaskDelay(100 / portTICK_PERIOD_MS);  
+    gpio_set_level(LLCC68_RESET_SPI, 1);  
+    vTaskDelay(100 / portTICK_PERIOD_MS);  
+}
+
+/*******************************************************************************
+ * Function name  : get_llcc68_version
+ *
+ * Description    : version of the chip llcc68. 
+ * Parameters     : None
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Keerthi Mallesh 
+ * date           : 12SEP2024
+ ******************************************************************************/
+void get_llcc68_version() {
+    esp_err_t ret;
+    uint8_t tx_data[2] = {0xC0, 0x00};  
+    uint8_t rx_data[1] = {0};           
+
+    spi_transaction_t t;
+    memset(&t, 0, sizeof(t));
+    t.length = 16;           
+    t.tx_buffer = tx_data;   
+    t.rx_buffer = NULL;      
+    ret = spi_device_transmit(lora_spi, &t);  
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "SPI command transmit failed: %s", esp_err_to_name(ret));
+        return;
+    }
+
+    memset(&t, 0, sizeof(t));
+    t.length = 8;            
+    t.tx_buffer = NULL;      
+    t.rx_buffer = rx_data;   
+    ret = spi_device_transmit(lora_spi, &t);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "SPI read transmit failed: %s", esp_err_to_name(ret));
+        return;
+    }
+
+    ESP_LOGI(TAG, "LLCC68 Version: 0x%02X", rx_data[0]);
+}
+
+/*******************************************************************************
+ * Function name  : get_llcc68_deveui
+ *
+ * Description    : get the llcc68 device unique ID. 
+ * Parameters     : None
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Keerthi Mallesh 
+ * date           : 12SEP2024
+ ******************************************************************************/
+void get_llcc68_deveui() {
+    esp_err_t ret;
+    uint8_t tx_data[2] = {0x89, 0x00}; 
+    uint8_t rx_data[8] = {0};          
+ 
+    spi_transaction_t t;
+    memset(&t, 0, sizeof(t));           
+    t.length = 16;                      
+    t.tx_buffer = tx_data;              
+
+    ret = spi_device_transmit(lora_spi, &t);
+    ESP_ERROR_CHECK(ret);
+
+    memset(&t, 0, sizeof(t));
+    t.length = 8 * 8;                   
+    t.rx_buffer = rx_data;              
+
+    ret = spi_device_transmit(lora_spi, &t);
+    ESP_ERROR_CHECK(ret);
+
+    ESP_LOGI(TAG, "LLCC68 DevEUI: %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X",
+             rx_data[0], rx_data[1], rx_data[2], rx_data[3],
+             rx_data[4], rx_data[5], rx_data[6], rx_data[7]);
+}

@@ -146,11 +146,19 @@ void app_main(void)
     create_leds_task();
     
     LoRaAppInit();
-    create_lora_task();
     
-    create_Accelerometer_task();
+    init_spi();
     
-    mqtt_init();
+    llcc68_reset();
+    
+    get_llcc68_version();
+    get_llcc68_deveui();
+        
+   // create_lora_task();
+    
+    //create_Accelerometer_task();
+    
+    //mqtt_init();
 	//create_mqtt_task();
     
     while(1)
