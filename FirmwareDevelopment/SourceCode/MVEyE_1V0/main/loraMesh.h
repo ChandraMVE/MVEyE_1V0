@@ -63,14 +63,6 @@
 //  \__> |___ \__/ |__) /~~\ |___     \/  /~~\ |  \ .__/
 //
 //==============================================================================
-typedef struct {
-	
-    uint8_t senderID;
-    uint8_t destinationID;
-    uint8_t hopCount;
-    char payload[256];  // Adjust size as needed
-    
-} MeshPacket;
 
 //==============================================================================
 //   __        __          __      ___            __  ___    __        __
@@ -79,8 +71,7 @@ typedef struct {
 //
 //==============================================================================
 
-void mesh_init(uint8_t device_id);
-bool mesh_send( void );
-void mesh_receive(void *pvParameters);
+void create_lora_mesh(void);
+
 
 #endif /* MAIN_LORAMESH_H_ */
