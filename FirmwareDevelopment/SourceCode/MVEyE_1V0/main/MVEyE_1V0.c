@@ -152,8 +152,8 @@ void app_main(void)
     create_Accelerometer_task();
     
     // Initialize and configure Lora and tasks to handle ping pong data    
-    LoRaAppInit();
-    create_lora_task();
+    //LoRaAppInit();
+    //create_lora_task();
     
     // Initialize MQTT, WIFI settings and events to handle publish and subscribe topics
     mqtt_init();
