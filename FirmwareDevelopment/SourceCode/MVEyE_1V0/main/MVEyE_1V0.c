@@ -139,9 +139,15 @@ void get_esp32_version(void)
  
 void app_main(void)
 {
+	
+	char console_input[100];
+    int len;
+        	
 	vTaskDelay(5000 / portTICK_PERIOD_MS); //Wait for proper debug messages to see.
+	
     get_esp32_version();
-    
+    example_configure_stdin_stdout();
+    	    
     init_leds();
     create_leds_task();
     
@@ -150,12 +156,19 @@ void app_main(void)
     
     create_Accelerometer_task();
     
-    mqtt_init();
+    //mqtt_init();
 	//create_mqtt_task();
     
-    while(1)
-    {
-		ESP_LOGD(TAG,"MVEyE active");
+	while(1)
+	{
+		// ignore empty or LF only string
+	    do {
+	        fgets(console_input, 100, stdin);
+	        len = strlen(console_input);
+	    } while (len<=1 && console_input[0] == '\n');
+	    console_input[len - 1] = '\0';
+	    
+	    printf("Received string  = %s\r\n", console_input);
 		vTaskDelay(1000 / portTICK_PERIOD_MS);		
 	}
 }
