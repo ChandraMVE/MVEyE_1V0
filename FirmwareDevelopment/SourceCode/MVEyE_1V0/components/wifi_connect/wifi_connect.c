@@ -16,6 +16,7 @@
 #include "protocol_examples_common.h"
 #include "example_common_private.h"
 #include "esp_log.h"
+#include "../../main/MVEyE_1V0.h"
 
 #if CONFIG_EXAMPLE_CONNECT_WIFI
 
@@ -241,8 +242,8 @@ esp_err_t example_wifi_connect(void)
     wifi_config_t wifi_config = {
         .sta = {
 #if !CONFIG_EXAMPLE_WIFI_SSID_PWD_FROM_STDIN
-            .ssid = CONFIG_EXAMPLE_WIFI_SSID,
-            .password = CONFIG_EXAMPLE_WIFI_PASSWORD,
+            .ssid = CONFIG_USER_WIFI_SSID,//CONFIG_EXAMPLE_WIFI_SSID
+            .password = CONFIG_USER_WIFI_PASSWORD,//CONFIG_EXAMPLE_WIFI_PASSWORD
 #endif
             .scan_method = EXAMPLE_WIFI_SCAN_METHOD,
             .sort_method = EXAMPLE_WIFI_CONNECT_AP_SORT_METHOD,
@@ -270,6 +271,8 @@ esp_err_t example_wifi_connect(void)
         wifi_config.sta.threshold.authmode = WIFI_AUTH_OPEN;
     }
 #endif
+
+    ESP_LOGI(TAG, "SSID: = %s PWD: = %s\r\n", wifi_config.sta.ssid, wifi_config.sta.password);
     return example_wifi_sta_do_connect(wifi_config, true);
 }
 

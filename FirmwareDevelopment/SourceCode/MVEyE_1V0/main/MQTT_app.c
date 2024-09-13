@@ -46,6 +46,7 @@
 #include "protocol_examples_common.h"
 #include "esp_log.h"
 #include "mqtt_client.h"
+#include "MVEyE_1V0.h"
 
 //==============================================================================
 //   __   ___  ___         ___  __
@@ -335,6 +336,8 @@ void mqtt5_app_start(void)
     }
 #endif /* CONFIG_BROKER_URL_FROM_STDIN */
 
+	mqtt5_cfg.broker.address.uri = CONFIG_USER_MQTT_BROKER_URI;//"mqtt://mqtt.eclipseprojects.io";
+    ESP_LOGI(TAG, "MQTT URI: = %s\r\n", mqtt5_cfg.broker.address.uri);
     esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt5_cfg);
 
     /* Set connection properties and user properties */
@@ -368,7 +371,12 @@ void mqtt5_app_start(void)
  
 void mqtt_task(void *pvParameters)
 {
+	ESP_LOGI(TAG, "MQTT Task Created");
     mqtt5_app_start();
+	while(1)
+	{
+		vTaskDelay(1000 / portTICK_PERIOD_MS);		
+	}
 }
 
 /*******************************************************************************
@@ -391,11 +399,6 @@ void create_mqtt_task( void )
 
 void mqtt_init( void )
 {
-	
-	ESP_LOGI(TAG, "[APP] Startup..");
-    ESP_LOGI(TAG, "[APP] Free memory: %" PRIu32 " bytes", esp_get_free_heap_size());
-    ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
-
     esp_log_level_set("*", ESP_LOG_INFO);
     esp_log_level_set("mqtt_client", ESP_LOG_VERBOSE);
     esp_log_level_set("mqtt_example", ESP_LOG_VERBOSE);
@@ -413,8 +416,5 @@ void mqtt_init( void )
      * examples/protocols/README.md for more information about this function.
      */
      
-    ESP_ERROR_CHECK(example_connect());
-    
-    mqtt5_app_start();
-
+    ESP_ERROR_CHECK(example_connect());    
 }

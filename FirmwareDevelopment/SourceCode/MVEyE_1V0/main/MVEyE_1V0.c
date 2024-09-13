@@ -62,6 +62,7 @@
 #include "MQTT_app.h"
 #include "mqtt_client.h"
 
+#include "MVEyE_1V0.h"
 //==============================================================================
 //   __   ___  ___         ___  __
 //  |  \ |__  |__  | |\ | |__  /__`
@@ -116,12 +117,6 @@ void get_esp32_version(void)
            (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
 
     printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-#if 0
-    printf("Restarting now.\n");
-    fflush(stdout);
-    esp_restart();
-#endif
 }
 
 /*******************************************************************************
@@ -141,24 +136,30 @@ void app_main(void)
 {
 	
 	char console_input[100];
-    int len;
+    int len = 0;
         	
 	vTaskDelay(5000 / portTICK_PERIOD_MS); //Wait for proper debug messages to see.
 	
+	// Set up USB-UART CLI
     get_esp32_version();
     example_configure_stdin_stdout();
-    	    
+    
+    // Initialize and set up LEDs	    
     init_leds();
     create_leds_task();
     
+    // Initialize and handle accelerometer data via Interrupt routine and Task Queue
+    create_Accelerometer_task();
+    
+    // Initialize and configure Lora and tasks to handle ping pong data    
     LoRaAppInit();
     create_lora_task();
     
-    create_Accelerometer_task();
+    // Initialize MQTT, WIFI settings and events to handle publish and subscribe topics
+    mqtt_init();
+	create_mqtt_task();
     
-    //mqtt_init();
-	//create_mqtt_task();
-    
+    // Use main Task to handle CLI
 	while(1)
 	{
 		// ignore empty or LF only string
@@ -172,4 +173,3 @@ void app_main(void)
 		vTaskDelay(1000 / portTICK_PERIOD_MS);		
 	}
 }
-
