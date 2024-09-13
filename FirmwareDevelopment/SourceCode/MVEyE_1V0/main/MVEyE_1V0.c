@@ -77,7 +77,17 @@
 //  \__> |___ \__/ |__) /~~\ |___     \/  /~~\ |  \ .__/
 //
 //==============================================================================
+bool is_wifi_connected = false;
 
+bool get_wifi_connected()
+{
+	return is_wifi_connected;
+}
+
+void set_wifi_connected(bool is_connected)
+{
+	is_wifi_connected = is_connected;
+}
 /*******************************************************************************
  * Function name  : get_esp32_version
  *

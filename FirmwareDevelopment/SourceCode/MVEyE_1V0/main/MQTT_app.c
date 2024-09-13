@@ -66,6 +66,7 @@
 //==============================================================================
 char mqtt_message[256] = "data_3";		//! In this we can add LoRa reading. 
 bool is_mqtt_connected = false;
+
 //==============================================================================
 //   __  ___      ___    __                __   __
 //  /__`  |   /\   |  | /  `    \  /  /\  |__) /__`
@@ -133,6 +134,7 @@ esp_mqtt5_disconnect_property_config_t disconnect_property = {
     .disconnect_reason = 0,
 };
 
+bool is_subscribed = false;
 /***********************************************************************************
  * Function name  : print_user_property
  *
@@ -209,13 +211,6 @@ void mqtt5_event_handler(void *handler_args, esp_event_base_t base, int32_t even
     case MQTT_EVENT_UNSUBSCRIBED:
         ESP_LOGI(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
         print_user_property(event->property->user_property);
-#if 0        
-        esp_mqtt5_client_set_user_property(&disconnect_property.user_property, user_property_arr, USE_PROPERTY_ARR_SIZE);
-        esp_mqtt5_client_set_disconnect_property(client, &disconnect_property);
-        esp_mqtt5_client_delete_user_property(disconnect_property.user_property);
-        disconnect_property.user_property = NULL;
-        esp_mqtt_client_disconnect(client);
-#endif
         break;
         
     case MQTT_EVENT_PUBLISHED:
@@ -359,54 +354,42 @@ void mqtt_task(void *pvParameters)
     
 	while(1)
 	{
-		if(is_mqtt_connected == true)
+		if(true == get_wifi_connected())
 		{
-			// MQTT Connected
-			static bool is_subscribed_once = false;
+			// WiFi Connected
+			if(is_mqtt_connected == true)
 			{
-				esp_mqtt5_client_set_user_property(&subscribe1_property.user_property, user_property_arr, USE_PROPERTY_ARR_SIZE);
-		        esp_mqtt5_client_set_subscribe_property(client, &subscribe1_property);
-		        msg_id = esp_mqtt_client_subscribe(client, "/topic/qos1", 2);
-		        esp_mqtt5_client_delete_user_property(subscribe1_property.user_property);
-		        subscribe1_property.user_property = NULL;
-		        ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
-		        is_subscribed_once = true;			
-			}
-
-	        esp_mqtt5_client_set_user_property(&publish_property.user_property, user_property_arr, USE_PROPERTY_ARR_SIZE);
-	        esp_mqtt5_client_set_publish_property(client, &publish_property);
-	        msg_id = esp_mqtt_client_publish(client, "/topic/qos1", mqtt_message, 0, 1, 1);
-	        esp_mqtt5_client_delete_user_property(publish_property.user_property);
-	        publish_property.user_property = NULL;
-	        ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
-
-#if 0	
-	        esp_mqtt5_client_set_user_property(&subscribe_property.user_property, user_property_arr, USE_PROPERTY_ARR_SIZE);
-	        esp_mqtt5_client_set_subscribe_property(client, &subscribe_property);
-	        msg_id = esp_mqtt_client_subscribe(client, "/topic/qos0", 0);
-	        esp_mqtt5_client_delete_user_property(subscribe_property.user_property);
-	        subscribe_property.user_property = NULL;
-	        ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
-
-	        esp_mqtt5_client_set_user_property(&subscribe1_property.user_property, user_property_arr, USE_PROPERTY_ARR_SIZE);
-	        esp_mqtt5_client_set_subscribe_property(client, &subscribe1_property);
-	        msg_id = esp_mqtt_client_subscribe(client, "/topic/qos1", 2);
-	        esp_mqtt5_client_delete_user_property(subscribe1_property.user_property);
-	        subscribe1_property.user_property = NULL;
-	        ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+				// MQTT Connected
+				if(is_subscribed == false)
+				{
+					esp_mqtt5_client_set_user_property(&subscribe1_property.user_property, user_property_arr, USE_PROPERTY_ARR_SIZE);
+			        esp_mqtt5_client_set_subscribe_property(client, &subscribe1_property);
+			        msg_id = esp_mqtt_client_subscribe(client, "/topic/qos1", 2);
+			        esp_mqtt5_client_delete_user_property(subscribe1_property.user_property);
+			        subscribe1_property.user_property = NULL;
+			        ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+			        is_subscribed = true;			
+				}
 	
-	        esp_mqtt5_client_set_user_property(&unsubscribe_property.user_property, user_property_arr, USE_PROPERTY_ARR_SIZE);
-	        esp_mqtt5_client_set_unsubscribe_property(client, &unsubscribe_property);
-	        msg_id = esp_mqtt_client_unsubscribe(client, "/topic/qos0");
-	        ESP_LOGI(TAG, "sent unsubscribe successful, msg_id=%d", msg_id);
-	        esp_mqtt5_client_delete_user_property(unsubscribe_property.user_property);
-	        unsubscribe_property.user_property = NULL;
-#endif	        
+		        esp_mqtt5_client_set_user_property(&publish_property.user_property, user_property_arr, USE_PROPERTY_ARR_SIZE);
+		        esp_mqtt5_client_set_publish_property(client, &publish_property);
+		        msg_id = esp_mqtt_client_publish(client, "/topic/qos1", mqtt_message, 0, 1, 1);
+		        esp_mqtt5_client_delete_user_property(publish_property.user_property);
+		        publish_property.user_property = NULL;
+		        ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);	        
+			}
+			else
+			{	
+				mqtt5_app_start();
+				is_subscribed = false;
+				// MQTT Disconnected		    	
+			}
 		}
 		else
-		{	
-			// MQTT Disconnected		    	
+		{
+			// Wi-Fi Disconnected
 		}
+		
 		
 		vTaskDelay(3000 / portTICK_PERIOD_MS);		
 	}
