@@ -77,6 +77,17 @@ MeshPacket receivedPacket;
 
 uint8_t destination_id;
 
+typedef struct MeshNode {
+	
+    uint8_t deviceID;      
+    float rssi;              
+    char device_address[16];  
+    struct MeshNode *next;
+    
+} MeshNode;
+
+MeshNode *mesh_head = NULL;
+
 //==============================================================================
 //   __  ___      ___    __                __   __
 //  /__`  |   /\   |  | /  `    \  /  /\  |__) /__`
@@ -277,4 +288,222 @@ void create_lora_mesh( void )
 #endif
 
 }
+
+/***********************************************************************************
+ * Function name  : lora_receive_task
+ *
+ * Description    : Be in receive mode for 5 seconds.
+ * Parameters     : None
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Keerthi Mallesh
+ * date           : 12SEP2024
+ ***********************************************************************************/
  
+ void lora_receive_task() {
+	 
+	 ESP_LOGI(pcTaskGetName(NULL), "Start");
+	 
+	 uint8_t buffer[20];
+	 
+	 while(1)
+	 {
+		uint8_t rxLen = LoRaReceive(buffer, sizeof(buffer));
+		
+		if(rxLen > 0)
+		{
+			for(int i=0;i<sizeof(buffer);i++){
+						ESP_LOGI(pcTaskGetName(NULL), "The received message:%d", buffer[i] );
+			}
+			
+		}
+ 		vTaskDelay(5000);
+	 }
+ }
+ 
+ /***********************************************************************************
+ * Function name  : transmit_task
+ *
+ * Description    : Be in transmit mode for 5 seconds.
+ * Parameters     : None
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Keerthi Mallesh
+ * date           : 12SEP2024
+ ***********************************************************************************/
+ 
+ void lora_broadcast_task() {
+	 
+	 ESP_LOGI(pcTaskGetName(NULL), "Start");
+	 
+	 uint8_t tx_buffer[20];
+	 
+	 while(1)
+	 {
+			int8_t rssi, snr;
+			GetPacketStatus(&rssi, &snr);	
+			
+			tx_buffer[0] = rssi;
+			tx_buffer[1] = snr;
+				
+				if (LoRaSend(tx_buffer, sizeof(tx_buffer), LLCC68_TXMODE_SYNC))
+
+ 		vTaskDelay(5000);
+	 }
+ }
+ 
+ /***********************************************************************************
+ * Function name  : create_node
+ *
+ * Description    : creating nodes for lora mesh.
+ * Parameters     : deviceID, rssi, device_address pointer.
+ * Returns        : newNode
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Keerthi Mallesh
+ * date           : 13SEP2024
+ ***********************************************************************************/ 
+ 
+MeshNode* create_node(uint8_t deviceID, float rssi, const char *device_address) {
+	 
+    struct MeshNode* newNode = (struct MeshNode*)malloc(sizeof(struct MeshNode));
+    
+    if ( newNode == NULL ) {
+		ESP_LOGI(TAG, "Memory allocation failed\n");
+    }
+    
+    newNode->deviceID = deviceID;
+    newNode->rssi = rssi;
+    newNode->next = NULL;  
+    
+    ESP_LOGI(TAG,"Device ID %d inserted with RSSI %.2f\n", deviceID, rssi);
+    
+    return newNode;
+}
+
+ /***********************************************************************************
+ * Function name  : create_node
+ *
+ * Description    : creating nodes for lora mesh.
+ * Parameters     : deviceID, rssi, device_address pointer.
+ * Returns        : newNode
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Keerthi Mallesh
+ * date           : 13SEP2024
+ ***********************************************************************************/
+ 
+void add_mesh_node(uint8_t device_id, float rssi, const char *device_address) {
+    MeshNode *new_node = create_node(device_id, rssi, device_address);
+    if (new_node == NULL) return;
+
+    if (mesh_head == NULL) {
+        mesh_head = new_node;
+    } else {
+        MeshNode *temp = mesh_head;
+        while (temp->next != NULL) {
+            temp = temp->next;
+        }
+        temp->next = new_node;
+    }
+}
+
+ /***********************************************************************************
+ * Function name  : display_mesh_nodes
+ *
+ * Description    : display nodes connected.
+ * Parameters     : None.
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Keerthi Mallesh
+ * date           : 13SEP2024
+ ***********************************************************************************/
+ 
+ void display_mesh_nodes() {
+	 
+    MeshNode *current = mesh_head;
+    
+    ESP_LOGI(TAG, "LoRa Mesh Network Information:\n");
+    
+    while (current != NULL) {
+		ESP_LOGI( TAG, "Device ID: %d, RSSI: %.2f\n",current->deviceID, current->rssi );
+        current = current->next;
+    }
+}
+
+ /***********************************************************************************
+ * Function name  : deleteNode
+ *
+ * Description    : deleting the node from the mesh network.
+ * Parameters     : pointer head.
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Keerthi Mallesh
+ * date           : 13SEP2024
+ ***********************************************************************************/
+ 
+void deleteNode(struct MeshNode** head, int id) {
+	
+    struct MeshNode *temp = *head, *prev = NULL;
+    
+    if (temp != NULL && temp->deviceID == id) {
+        *head = temp->next;   
+        free(temp); 
+        ESP_LOGI( TAG, "Device ID %d removed from the mesh.\n", id );         
+    }
+    
+    while (temp != NULL && temp->deviceID != id) {
+        prev = temp;
+        temp = temp->next;
+    }
+    
+    if (temp == NULL) {
+		ESP_LOGI( TAG, "Device ID %d not found in the mesh.\n", id );         
+    }
+    
+    prev->next = temp->next;
+    free(temp);
+    ESP_LOGI( TAG, "Device ID %d removed from the mesh.\n", id );    
+}
+
+ /***********************************************************************************
+ * Function name  : findDevice
+ *
+ * Description    : checking the device information of different nodes .
+ * Parameters     : destination ID.
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Keerthi Mallesh
+ * date           : 13SEP2024
+ ***********************************************************************************/
+
+MeshNode* findDevice( int destinationID) {
+	
+     MeshNode* current = mesh_head;
+	ESP_LOGI( TAG, "Routing to Device ID %d:\n", destinationID);    
+
+    while (current != NULL) {
+		ESP_LOGI( TAG, "Checking Device ID: %d\n", current->deviceID);    
+        
+        if (current->deviceID == destinationID) {
+            ESP_LOGI( TAG, "Destination Device ID %d found with RSSI %.2f\n", current->deviceID, current->rssi);
+            return current;
+        }
+        current = current->next;
+    }
+    
+	ESP_LOGI( TAG, "Device ID %d not found in the network.\n", destinationID);
+	return NULL;
+}
