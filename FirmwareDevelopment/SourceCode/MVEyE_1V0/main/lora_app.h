@@ -71,6 +71,12 @@
 //
 //==============================================================================
 void create_lora_task(void);
+void create_lora_task_node1(void);
+void create_lora_task_node2(void);
+
+void create_lora_task_node3(void);
+void LoRaIntermediateInit(void);
+void create_intermediate_task(void);
 void LoRaAppInit(void);
 
 #endif /* MAIN_LORA_APP_H_ */

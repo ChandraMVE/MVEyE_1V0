@@ -1,216 +1,114 @@
 //-----------------------------------------------------------------
 ///
-///     \file lora_app.c
+///     \file lora_node1.c
 ///
-///     \brief lora application framework driver
+///     \brief lora application for Node 1 (source)
 ///
 ///
 ///     \author       Chandrashekhar Venkatesh
-///
-///     Location:     India
 ///
 ///     Project Name: MVEyE_1V0
 ///
 ///     \date Created 20AUG2024
 ///
-///      Tools:  EspressifIDE
-///      Device:   ESP32WROOM
-///		 Operating System: windows 10
-/// 	 Java Runtime Version: 17.0.11+9
-///      Eclipse Version: 4.30.0.v20231201-0110
-///      Eclipse CDT Version: 11.4.0.202309142347
-///      IDF Eclipse Plugin Version: 3.0.0.202406051940
-///      IDF Version:   5.3
-///
-/// Copyright © 2024 MicriVision Embedded Pvt Ltd
-///
-/// Confidential Property of MicroVision Embedded Pvt Ltd
+///     Tools:  EspressifIDE
+///     Device:   ESP32WROOM
 ///
 //-----------------------------------------------------------------
 
-//==============================================================================
-//          __             __   ___  __
-//  | |\ | /  ` |    |  | |  \ |__  /__`
-//  | | \| \__, |___ \__/ |__/ |___ .__/
-//
-//==============================================================================
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "lora_app.h"
 #include "lora_llc68.h"
-#include <ctype.h>
-#include "string.h"
-//==============================================================================
-//   __   ___  ___         ___  __
-//  |  \ |__  |__  | |\ | |__  /__`
-//  |__/ |___ |    | | \| |___ .__/
-//
-//==============================================================================
-#define TAG "LORA_APP"
-#define TIMEOUT 100
-#define PING 1
-#define PONG 0
+#include <string.h>
+
+#define TAG "LORA_NODE1"
 #define DEVICE_ID 001
 #define DESTINATION_DEVICE_ID 003
-#define MAX_HOPS 5
-//==============================================================================
-//   __        __   __                          __   __
-//  / _` |    /  \ |__)  /\  |       \  /  /\  |__) /__`
-//  \__> |___ \__/ |__) /~~\ |___     \/  /~~\ |  \ .__/
-//
-//==============================================================================
+
 typedef struct {
-	
     uint8_t senderID;
     uint8_t destinationID;
     uint8_t hopCount;
-    char    payload[256];
-    
+    char payload[256];
 } MeshPacket;
-
-extern char mqtt_message[256];
-//==============================================================================
-//   __  ___      ___    __                __   __
-//  /__`  |   /\   |  | /  `    \  /  /\  |__) /__`
-//  .__/  |  /~~\  |  | \__,     \/  /~~\ |  \ .__/
-//
-//==============================================================================
-
-void forward_message(MeshPacket* packet);
 
 /*******************************************************************************
  * Function name  : task_ping
  *
- * Description    : ping function task
+ * Description    : Node 1 task to send ping message
  * Parameters     : None
  * Returns        : None
- *
- * Known Issues   :
- * Note           :
- * author         : Chandrashekhar Venkatesh
- * date           : 20AUG2024
  ******************************************************************************/
- void task_ping (void *pvParameters)
- {
- 	ESP_LOGI(pcTaskGetName(NULL), "Start");
- 	MeshPacket packet;
- 	
- 	packet.senderID 	 = DEVICE_ID;
+void task_ping(void *pvParameters)
+{
+    ESP_LOGI(pcTaskGetName(NULL), "Start sending ping...");
+    MeshPacket packet;
+
+    packet.senderID = DEVICE_ID;
     packet.destinationID = DESTINATION_DEVICE_ID;
-    packet.hopCount 	 = 0;
- 	strcpy((char *)packet.payload, "Hello, this is a test message!");
+    packet.hopCount = 0;
+    strcpy((char *)packet.payload, "Hello from Node 1!");
 
-	uint8_t buffer[sizeof(MeshPacket)];
-	memcpy(buffer, &packet, sizeof(MeshPacket));
+    uint8_t buffer[sizeof(MeshPacket)];
+    memcpy(buffer, &packet, sizeof(MeshPacket));
 
-	for(int i = 0;i < sizeof(MeshPacket); i++)
-	{
-		ESP_LOGI(TAG, "Buffer:%d",buffer[i]);
-	}
-	
-	while(1) {
-		//TickType_t nowTick = xTaskGetTickCount();
-
-		// Wait for transmission to complete
-		if (LoRaSend(buffer, sizeof(MeshPacket), LLCC68_TXMODE_SYNC)) 
-		{	
-			// Print the data to be transmitted
-        	ESP_LOGI(TAG, "Transmitting Message:");
-        	ESP_LOGI(TAG, "Sender ID: %d", packet.senderID);
-        	ESP_LOGI(TAG, "Destination ID: %d", packet.destinationID);
-        	ESP_LOGI(TAG, "Hop Count: %d", packet.hopCount);
-        	ESP_LOGI(TAG, "Payload: %s", packet.payload);	
-        	
-         ESP_LOGI(pcTaskGetName(NULL), "Ping message sent");
+    while (1) {
+        if (LoRaSend(buffer, sizeof(MeshPacket), LLCC68_TXMODE_SYNC)) {
+            ESP_LOGI(TAG, "Ping Message Sent to Node 3");
+            ESP_LOGI(TAG, "Payload: %s", packet.payload);
         } else {
-            ESP_LOGE(pcTaskGetName(NULL), "Ping message failed");
-        }	
-        
-                vTaskDelay(pdMS_TO_TICKS(1000));
+            ESP_LOGE(TAG, "Failed to send ping message");
+        }
+        vTaskDelay(pdMS_TO_TICKS(5000)); // Send ping every 5 seconds
     }
 }
 
- /*******************************************************************************
- * Function name  : task_pong
+/*******************************************************************************
+ * Function name  : task_receive_pong
  *
- * Description    : pong function task
+ * Description    : Node 1 task to receive pong response
  * Parameters     : None
  * Returns        : None
- *
- * Known Issues   :
- * Note           :
- * author         : Chandrashekhar Venkatesh
- * date           : 20AUG2024
  ******************************************************************************/
- void task_pong (void *pvParameters)
- {
-	 ESP_LOGI(pcTaskGetName(NULL), "Start");
-	 
-	uint8_t txData[256]; // Maximum Payload size of SX1261/62/68 is 255
-	uint8_t rxData[256]; // Maximum Payload size of SX1261/62/68 is 255
-	
-	MeshPacket receivedPacket;
-	
-	uint8_t buffer[20];
-	
-	while(1) {
-		uint8_t rxLen = LoRaReceive(buffer, sizeof(buffer));
-		
-		if ( rxLen > 0 ) { 
-		
-        	
-			if (receivedPacket.destinationID == DEVICE_ID) {
-                ESP_LOGI(TAG, "Message received for me: %s", receivedPacket.payload);
-               
+void task_receive_pong(void *pvParameters)
+{
+    ESP_LOGI(pcTaskGetName(NULL), "Start receiving pong...");
 
-                 // Send the response
-                receivedPacket.senderID = DEVICE_ID;
-                receivedPacket.destinationID = receivedPacket.senderID;
-                receivedPacket.hopCount = 0;
-                if (LoRaSend(buffer, sizeof(MeshPacket), LLCC68_TXMODE_SYNC)) {
-                    ESP_LOGI(TAG, "Pong response sent");
-                } else {
-                    ESP_LOGE(TAG, "Pong response failed");
-                }
-            } else {
-                // Forward the message if it's not for this device
-                ESP_LOGI(TAG, "Message received for another device, forwarding...");
-                forward_message(&receivedPacket); 
+    MeshPacket receivedPacket;
+    uint8_t buffer[sizeof(MeshPacket)];
+
+    while (1) {
+        uint8_t rxLen = LoRaReceive(buffer, sizeof(buffer));
+        if (rxLen > 0) {
+            memcpy(&receivedPacket, buffer, sizeof(MeshPacket));
+
+            if (receivedPacket.destinationID == DEVICE_ID) {
+                ESP_LOGI(TAG, "Pong response received from Node 3");
+                ESP_LOGI(TAG, "Payload: %s", receivedPacket.payload);
             }
         }
-        
-        vTaskDelay(1); // Avoid WatchDog alerts
+
+        vTaskDelay(pdMS_TO_TICKS(1000)); // Check for response every second
     }
-    
-    			for(int i = 0; i < sizeof( buffer ); i++ )
-				{
-					ESP_LOGI(TAG, "Received information %d", buffer[i]);
-				}	
-}               
-                              
-/*******************************************************************************
- * Function name  : create_lora_task
- *
- * Description    : function to create Lora application tasks
- * Parameters     : None
- * Returns        : None
- *
- * Known Issues   :
- * Note           :
- * author         : Chandrashekhar Venkatesh
- * date           : 20AUG2024
- ******************************************************************************/
-void create_lora_task(void)
-{
-#if PING
-	xTaskCreate(&task_ping, "PING", 1024*4, NULL, 5, NULL);
-#endif
-#if PONG	
-	xTaskCreate(&task_pong, "PONG", 1024*4, NULL, 5, NULL);
-#endif
 }
 
+/*******************************************************************************
+ * Function name  : create_lora_task_node1
+ *
+ * Description    : Creates tasks for sending ping and receiving pong in Node 1
+ * Parameters     : None
+ * Returns        : None
+ ******************************************************************************/
+void create_lora_task_node1(void)
+{
+    // Create task for sending ping messages
+    xTaskCreate(&task_ping, "PING", 1024*4, NULL, 5, NULL);
+
+    // Create task for receiving pong responses
+    xTaskCreate(&task_receive_pong, "RECEIVE_PONG", 1024*4, NULL, 5, NULL);
+}
 /*******************************************************************************
  * Function name  : LoRaAppInit
  *
@@ -284,31 +182,4 @@ void LoRaAppInit(void)
 	codingRate = CONFIG_CODING_RATE
 #endif
 	LoRaConfig(spreadingFactor, bandwidth, codingRate, preambleLength, payloadLen, crcOn, invertIrq);
-}
-
-/*******************************************************************************
- * Function name  : forward_message
- *
- * Description    : maintains the hoping mechanism.
- * Parameters     : packet pointer
- * Returns        : None
- *
- * Known Issues   :
- * Note           :
- * author         : Keerthi Mallesh
- * date           : 06SEP2024
- ******************************************************************************/
- 
-void forward_message(MeshPacket* packet) {
-    if (packet->hopCount >= MAX_HOPS) {
-        ESP_LOGW(TAG, "Message dropped, exceeded max hops");
-        return;
-    }
-
-    packet->hopCount++;
-    if (LoRaSend((uint8_t*)packet, sizeof(MeshPacket), LLCC68_TXMODE_SYNC)) {
-        ESP_LOGI(TAG, "Message forwarded, hop count: %d", packet->hopCount);
-    } else {
-        ESP_LOGE(TAG, "Failed to forward message");
-    }
 }

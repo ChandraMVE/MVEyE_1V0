@@ -61,6 +61,7 @@
 
 #include "MQTT_app.h"
 #include "mqtt_client.h"
+#include "LoRa_Mesh_app.h"
 
 //==============================================================================
 //   __   ___  ___         ___  __
@@ -140,17 +141,20 @@ void get_esp32_version(void)
 void app_main(void)
 {
 	vTaskDelay(5000 / portTICK_PERIOD_MS); //Wait for proper debug messages to see.
-    get_esp32_version();
+    //get_esp32_version();
     
     init_leds();
     create_leds_task();
     
     LoRaAppInit();
-    create_lora_task();
+    //LoRaIntermediateInit();
+    //create_lora_task();
     
-    create_Accelerometer_task();
+    create_lora_mesh_Task();
+    //create_intermediate_task();
+   // create_Accelerometer_task();
     
-    mqtt_init();
+    //mqtt_init();
 	//create_mqtt_task();
     
     while(1)
