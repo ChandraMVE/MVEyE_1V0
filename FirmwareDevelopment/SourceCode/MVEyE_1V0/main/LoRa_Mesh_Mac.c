@@ -5,6 +5,7 @@
 #include "freertos/semphr.h"    // Semaphore management in FreeRTOS
 #include "esp_timer.h"             // Timer utilities in FreeRTOS
 #include "Route.h"         // Routing table management for the mesh network
+#include "esp_log.h"
 #include "LoRa-Mesh_Net.h"
 /* PHY (Physical layer) counters to track radio events */
 uint32_t phy_cad_done;          // Number of successful CAD (Channel Activity Detection)
@@ -29,8 +30,6 @@ static uint8_t tx_timer;        // Timer for transmission interval control
 SemaphoreHandle_t m_irq_Semaphore; // Semaphore to handle radio IRQs
 #define TAG "LORA_MAC"
 #define RTOS_TIME ((xTaskGetTickCount() * 1000) >> 9)
-#define LOG_DBG(...) ESP_LOGI(TAG, __VA_ARGS__)
-#define LOG_ERR(...) ESP_LOGE(TAG, __VA_ARGS__)
 
 // Macro to generate an acknowledgment (ACK) packet
 #define GEN_ACK(q, p) \
@@ -47,25 +46,25 @@ bool mac_peek_pkg(LoRaPkg* p) {
     uint8_t i;
 
     // Log packet source and destination information
-    LOG_DBG("L2: nsrc: 0x%02x, ndst: 0x%02x, msrc: 0x%02x, mdst: 0x%02x",
+    ESP_LOGI(TAG,"L2: nsrc: 0x%02x, ndst: 0x%02x, msrc: 0x%02x, mdst: 0x%02x",
         p->Header.NetHeader.src, p->Header.NetHeader.dst, p->Header.MacHeader.src, p->Header.MacHeader.dst);
     
     // Process if the packet is a Route Advertisement (RA) type
     if (p->Header.type == TYPE_RA && p->Header.NetHeader.subtype == SUB_RA) {
         for (i = 0; i < p->RouteData.hops; i++) {
-            LOG_DBG("L2: recv RA_List_%d: 0x%02x", i, p->RouteData.RA_List[i]); // Log RA list
+            ESP_LOGI(TAG,"L2: recv RA_List_%d: 0x%02x", i, p->RouteData.RA_List[i]); // Log RA list
         }
 
         // Ignore RA from local node
         if (p->Header.NetHeader.src == Route.getNetAddr()) {
-            LOG_DBG("ignore RA from local");
+            ESP_LOGI(TAG,"ignore RA from local");
             return false;
         }
 
         // Ignore previously received RA
         for (i = 0; i < p->RouteData.hops; i++) {
             if (p->RouteData.RA_List[i] == Route.getNetAddr()) {
-                LOG_DBG("ignore RA already process");
+                ESP_LOGI(TAG,"ignore RA already process");
                 return false;
             }
         }
@@ -80,9 +79,9 @@ bool mac_peek_pkg(LoRaPkg* p) {
         if (p->Header.NetHeader.dst != Route.getNetAddr()) {
             p->RouteData.RA_List[p->RouteData.hops] = Route.getNetAddr();  // Add current node to RA list
             p->Header.NetHeader.hop++; p->RouteData.hops++;  // Increment hop count
-            LOG_DBG("L2: RA rebroadcast!");
+            ESP_LOGI(TAG,"L2: RA rebroadcast!");
             for (i = 0; i < p->RouteData.hops; i++) {
-                LOG_DBG("L2: send RA_List_%d: 0x%02x", i, p->RouteData.RA_List[i]);
+                ESP_LOGI(TAG,"L2: send RA_List_%d: 0x%02x", i, p->RouteData.RA_List[i]);
             }
             xQueueSend(mac_tx_buf, p, 0);  // Send packet to MAC TX buffer for rebroadcast
             return false;
@@ -118,7 +117,7 @@ static void mac_rx_handle(LoRaPkg* p)
 
 			/* check dup data */
 			if (p->Header.NetHeader.pid == _last_seen_pid[p->Header.MacHeader.src]) {
-				LOG_DBG("L2: dup data, drop!");
+				ESP_LOGI(TAG,"L2: dup data, drop!");
 				mac_rx_drop++;
 				return;
 			} else {
@@ -128,17 +127,17 @@ static void mac_rx_handle(LoRaPkg* p)
 		} else if (p->Header.type == TYPE_DATA_ACK) {
 			//LOG_DBG("L2: recv TYPE_DATA_ACK pid: %d, wait pid: %d", p->Header.NetHeader.pid, ack_wait_id);
 			if (p->Header.NetHeader.pid == ack_wait_id) {
-				LOG_DBG("L2: ack notify, Delay: %d", RTOS_TIME - ack_time);
+				ESP_LOGI(TAG,"L2: ack notify, Delay: %d", RTOS_TIME - ack_time);
 				xTaskNotifyGive(lora_net_tx_handle);
 			} else {
-				LOG_DBG("L2: ack ignore!");
+				ESP_LOGI(TAG,"L2: ack ignore!");
 				mac_rx_drop++;
 			}
 			return;
 		} else if (p->Header.type == TYPE_RA && p->Header.NetHeader.subtype == SUB_RA_RESPON) {
 			uint8_t i, j;
 			for ( i = 0; i < p->RouteData.hops; i++) {
-				LOG_DBG("L2: recv RA_RESPON_List_%d: 0x%02x", i , p->RouteData.RA_List[i]);
+				ESP_LOGI(TAG,"L2: recv RA_RESPON_List_%d: 0x%02x", i , p->RouteData.RA_List[i]);
 			}
 
 			Route.updateRoute(p->Header.NetHeader.src,
@@ -230,15 +229,15 @@ void lora_mac_task(void *pvParameter)
                 irqRegs = GetIrqStatus();
                 if (IS_IRQ(irqRegs, LLCC68_IRQ_CRC_ERR) || IS_IRQ(irqRegs, LLCC68_IRQ_HEADER_ERR)) {
                     phy_rx_err++;
-                    LOG_DBG("L1: Rx error!");
+                    ESP_LOGI(TAG,"L1: Rx error!");
                 } else if (IS_IRQ(irqRegs, LLCC68_IRQ_TIMEOUT)) {
                     phy_rx_timeout++;
-                    LOG_DBG("L1: Rx timeout!");
+                    ESP_LOGI(TAG,"L1: Rx timeout!");
                 } else if (IS_IRQ(irqRegs, LLCC68_IRQ_RX_DONE)) {
                     phy_rx_done++;
                     pkgsize = 0;
                     GetPayload(pkgbuf, &pkgsize, sizeof(pkgbuf));
-                    LOG_DBG("L1: Rx done, size: %d, time: %d", pkgsize, RTOS_TIME - timer);
+                    ESP_LOGI(TAG,"L1: Rx done, size: %d, time: %d", pkgsize, RTOS_TIME - timer);
 
                     hdr_type = (PkgType)(pkgbuf[0]);
                     if (hdr_type < TYPE_MAX && pkgsize == pkgSizeMap[hdr_type][1]) {
@@ -252,7 +251,7 @@ void lora_mac_task(void *pvParameter)
                     }
                 } else {
                     phy_rx_err++;
-                    LOG_DBG("L1: Rx unknown error!");
+                    ESP_LOGI(TAG,"L1: Rx unknown error!");
                 }
             } else {
                 // CAD not detected, handle TX
@@ -271,10 +270,10 @@ void lora_mac_task(void *pvParameter)
                             if (hook->macTxEnd != NULL) hook->macTxEnd();
                             if (txtmp.Header.type == TYPE_DATA && txtmp.Header.NetHeader.ack == ACK)
                                 xSemaphoreGive(m_ack_Semaphore);
-                            LOG_DBG("L1: Tx done, size: %d, time: %d", pkgsize, RTOS_TIME - timer);
+                            ESP_LOGI(TAG,"L1: Tx done, size: %d, time: %d", pkgsize, RTOS_TIME - timer);
                             phy_tx_done++;
                         } else {
-                            LOG_DBG("L1: Tx error/timeout!");
+                            ESP_LOGI(TAG,"L1: Tx error/timeout!");
                             phy_tx_err++;
                         }
                     } else {

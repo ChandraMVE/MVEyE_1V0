@@ -183,7 +183,11 @@ typedef struct {
 #define SIZE_RA			((SIZE_HDR)+sizeof(RoutePayload))
 #define SIZE_PING		((SIZE_HDR)+(0))
 #define SIZE_DATA_ACK	((SIZE_HDR)+(0))
-
+#define CAD_PERIOD_MS                   30
+#define RX_TIMEOUT                      80
+#define TX_TIMEOUT                      250
+#define TX_TIMER_MASK                   0x3 /* tx timer is between (0 ~ 3) * CAD_PERIOD_MS  */
+#define LINKQMAP_CLEAR_PERIOD			30000
 extern const int8_t pkgSizeMap[][2];
 
 

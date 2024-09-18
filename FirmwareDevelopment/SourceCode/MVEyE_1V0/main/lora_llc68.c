@@ -1639,3 +1639,37 @@ void ReadCommand(uint8_t cmd, uint8_t* data, uint8_t numBytes) {
 	// wait for BUSY to go low
 	WaitForIdle(BUSY_WAIT);
 }
+
+
+void RadioSetMaxPayloadLength(uint8_t packetType, uint8_t maxPayloadLength)
+{
+    if (packetType == LLCC68_PACKET_TYPE_LORA) {
+        // Set the maximum payload length for LoRa packets
+        LoRaConfig(7, 125, 1, 8, maxPayloadLength, true, false);
+    } else if (packetType == LLCC68_PACKET_TYPE_GFSK) {
+        // Set the maximum payload length for FSK packets (if needed)
+        LoRaConfig(7, 125, 1, 8, maxPayloadLength, true, false);
+    } 
+    // Add more cases here if there are other packet types to handle
+}
+
+uint8_t GetPayload(uint8_t *buffer, uint8_t *size, uint8_t maxSize)
+{
+    uint8_t offset = 0; // Buffer offset
+
+    // Get the payload length and starting offset from the LoRa receive buffer
+    GetRxBufferStatus(size, &offset);
+    
+    // Check if the payload size exceeds the provided buffer size
+    if (*size > maxSize)
+    {
+        // Payload is too large for the buffer
+        return 1;
+    }
+
+    // Read the payload from the LoRa module into the buffer
+    ReadBuffer(buffer, *size);
+
+    // Return success
+    return 0;
+}

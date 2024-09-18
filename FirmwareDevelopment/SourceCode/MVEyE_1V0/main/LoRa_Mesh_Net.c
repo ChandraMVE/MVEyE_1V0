@@ -71,8 +71,7 @@ static int16_t _last_ra[255]; // Array to track the last route advertisement for
 
 #define TAG "LORA_MAC"
 
-#define LOG_DBG(...) ESP_LOGI(TAG, __VA_ARGS__)
-#define LOG_ERR(...) ESP_LOGE(TAG, __VA_ARGS__)
+
 // Macro to send a packet through the network layer
 #define NET_TX(p, queue, timeout, h) \
 	do { \
@@ -219,7 +218,7 @@ void lora_net_rx_task (void * pvParameter)
 					|| p.Header.NetHeader.dst == NET_BROADCAST_ADDR) {
 				switch((uint8_t)p.Header.type) {
 					case TYPE_DATA: // Data packet
-						ESP_LOGD(TAG,"L3: recv TYPE_DATA"); // Debug log for received data
+						ESP_LOGI(TAG,"L3: recv TYPE_DATA"); // Debug log for received data
 						NET_RX(&p, net_rx_buf, 0, hook); // Send to network layer receive queue
 						break;
 					case TYPE_DATA_ACK: // Data acknowledgment
@@ -228,13 +227,13 @@ void lora_net_rx_task (void * pvParameter)
 						if (_last_ra[p.Header.NetHeader.src] == p.Header.NetHeader.pid) // Check if already seen
 							break;
 						_last_ra[p.Header.NetHeader.src] = p.Header.NetHeader.pid; // Update last route advertisement
-						ESP_LOGD(TAG,"L3: recv TYPE_RA from %d, pid %d", p.Header.NetHeader.src, p.Header.NetHeader.pid); // Debug log for RA
+						ESP_LOGI(TAG,"L3: recv TYPE_RA from %d, pid %d", p.Header.NetHeader.src, p.Header.NetHeader.pid); // Debug log for RA
 						NET_RX(&p, net_rx_buf, 0, hook); // Send RA to network layer receive queue
 						break;
 					case TYPE_PING: // Ping request
 						GEN_PING_ACK(t, p); // Generate ping acknowledgment
 						NET_TX(&t, mac_tx_buf, portMAX_DELAY, hook); // Send ping acknowledgment
-						ESP_LOGD(TAG,"L3: recv TYPE_PING, sent PINGACK!"); // Debug log for ping acknowledgment
+						ESP_LOGI(TAG,"L3: recv TYPE_PING, sent PINGACK!"); // Debug log for ping acknowledgment
 						break;
 					default:
 						break;

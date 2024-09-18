@@ -517,7 +517,8 @@ uint8_t  WriteCommandBusyWait(uint8_t cmd, uint8_t* data, uint8_t numBytes);
 void     ReadCommand(uint8_t cmd, uint8_t* data, uint8_t numBytes);
 void     SPItransfer(uint8_t cmd, bool write, uint8_t* dataOut, uint8_t* dataIn, uint8_t numBytes, bool waitForBusy);
 void     LoRaError(int error);
-
+void RadioSetMaxPayloadLength(uint8_t packetType, uint8_t maxPayloadLength);
+uint8_t GetPayload(uint8_t *buffer, uint8_t *size, uint8_t maxSize);
 #if 0
 void lora_spi_init(void);
 void lora_io_init(void);

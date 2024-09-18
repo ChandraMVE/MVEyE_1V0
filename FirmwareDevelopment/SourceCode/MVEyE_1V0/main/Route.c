@@ -177,7 +177,7 @@ static void _delRouteByNexthop(uint8_t next_hop) {
         }
     }
     ESP_LOGI(TAG, "DEL by nh: 0x%02x", next_hop);  // Debug log for route deletion
-    PRINT_ROUTE_TABLE();  // Print the updated routing table
+    PRINT_ROUTE_TABLE;  // Print the updated routing table
     portEXIT_CRITICAL(mux);  // Exit critical section
 }
 
@@ -191,7 +191,7 @@ static void _delRouteByDest(uint8_t dest) {
         }
     }
     ESP_LOGI(TAG, "DEL by dst: 0x%02x", dest);  // Debug log for route deletion
-    PRINT_ROUTE_TABLE();  // Print the updated routing table
+    PRINT_ROUTE_TABLE;  // Print the updated routing table
     portEXIT_CRITICAL(mux);  // Exit critical section
 }
 // Updates the link quality map for a given address
@@ -217,7 +217,7 @@ static void _clearLinkQualityMapTimer(TimerHandle_t xTimer) {
             _LinkQuality[i].updated = false;  // Reset update flag
         }
     }
-    LOG_DBG(TAG,"LinkQualityMap clean: %d", cnt);  // Debug log for link quality map cleanup
+    ESP_LOGI(TAG,"LinkQualityMap clean: %d", cnt);  // Debug log for link quality map cleanup
     portEXIT_CRITICAL(mux);  // Exit critical section
 }
 
