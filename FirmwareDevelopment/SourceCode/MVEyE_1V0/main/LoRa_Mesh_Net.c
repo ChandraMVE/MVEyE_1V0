@@ -1,8 +1,8 @@
 //-----------------------------------------------------------------
 ///
-///     \file LoRa_Mesh_app.c
+///     \file LoRa_Mesh_Net.c
 ///
-///     \brief LoRa Mesh application framework driver
+///     \brief LoRa Mesh Network framework driver
 ///
 ///     \author       Chandrashekhar Venkatesh
 ///
@@ -40,39 +40,16 @@
 #include "string.h"
 #include "esp_timer.h"
 #include "LoRa_Mesh_app.h"
-#include "esp_log.h" // For ESP32 logging functions
-#include "LoRa-Mesh_Net.h"
+#include "esp_log.h" 
+#include "LoRa_Mesh_Net.h"
+//==============================================================================
+//   __   ___  ___         ___  __
+//  |  \ |__  |__  | |\ | |__  /__`
+//  |__/ |___ |    | | \| |___ .__/
+//
+//==============================================================================
+#define TAG "LORA_NET"
 
-/* Network layer counters */
-uint32_t net_tx_ack_ok;    // Number of successful ACKs
-uint32_t net_tx_ack_retry; // Number of ACK retries
-uint32_t net_tx_ack_fail;  // Number of failed ACKs
-uint32_t net_tx_done;      // Number of successfully transmitted packets
-uint32_t net_tx_drop;      // Number of dropped packets (No route to host)
-uint32_t net_rx_done;      // Number of successfully received packets
-uint32_t net_rx_drop;      // Number of dropped received packets
-uint32_t net_fwd_done;     // Number of successfully forwarded packets
-uint32_t net_fwd_err;      // Number of forwarding errors
-
-QueueHandle_t net_tx_buf;  // Queue for network transmit packets
-QueueHandle_t net_rx_buf;  // Queue for network receive packets
-
-uint32_t ack_time;         // Time when the last ACK was sent
-
-static void ra_handle(LoRaPkg* p, lora_net_hook *hook); // Forward declaration for handling route advertisement
-
-TaskHandle_t lora_net_tx_handle; // Task handle for network transmission
-
-uint8_t ack_wait_id = 0;    // ID for the current ACK wait
-static uint8_t ra_pid = 0;  // Route advertisement packet ID
-
-int16_t _last_seen_pid[255]; // Array to track the last seen packet ID for each node
-static int16_t _last_ra[255]; // Array to track the last route advertisement for each node
-
-#define TAG "LORA_MAC"
-
-
-// Macro to send a packet through the network layer
 #define NET_TX(p, queue, timeout, h) \
 	do { \
 		if (h->netTx != NULL) h->netTx(); \
@@ -80,7 +57,6 @@ static int16_t _last_ra[255]; // Array to track the last route advertisement for
 		net_tx_done++; \
 	} while (0)
 
-// Macro to receive a packet from the network layer
 #define NET_RX(p, queue, timeout, h) \
 	do { \
 		if (h->netRecv != NULL) h->netRecv(); \
@@ -88,7 +64,6 @@ static int16_t _last_ra[255]; // Array to track the last route advertisement for
 		net_rx_done++; \
 	} while (0)
 
-// Macro to generate a route advertisement (RA) packet
 #define GEN_Route_Adv(p, dest) \
 	do { \
 		p.RouteData.hops = 0; \
@@ -102,7 +77,7 @@ static int16_t _last_ra[255]; // Array to track the last route advertisement for
 		ra_pid++; \
 	} while (0)
 
-// Macro to generate a ping acknowledgment (PINGACK) packet
+
 #define GEN_PING_ACK(q, p) \
 	do { \
 		q.Header.type = TYPE_PING; \
@@ -114,86 +89,126 @@ static int16_t _last_ra[255]; // Array to track the last route advertisement for
 
 #define ACK_TIMEOUT 800    // Timeout duration for ACK
 #define ACK_MAX 3          // Maximum number of ACK retries
+//==============================================================================
+//   __        __   __                          __   __
+//  / _` |    /  \ |__)  /\  |       \  /  /\  |__) /__`
+//  \__> |___ \__/ |__) /~~\ |___     \/  /~~\ |  \ .__/
+//
+//==============================================================================
 
-SemaphoreHandle_t m_ack_Semaphore; // Semaphore to synchronize ACK reception
+//==============================================================================
+//   __  ___      ___    __                __   __
+//  /__`  |   /\   |  | /  `    \  /  /\  |__) /__`
+//  .__/  |  /~~\  |  | \__,     \/  /~~\ |  \ .__/
+//
+//==============================================================================
+/* Network layer counters */
+uint32_t net_tx_ack_ok;    
+uint32_t net_tx_ack_retry; 
+uint32_t net_tx_ack_fail;  
+uint32_t net_tx_done;      
+uint32_t net_tx_drop;      
+uint32_t net_rx_done;      
+uint32_t net_rx_drop;      
+uint32_t net_fwd_done;     
+uint32_t net_fwd_err;      
+QueueHandle_t net_tx_buf;  
+QueueHandle_t net_rx_buf;  
+uint32_t ack_time;         
+TaskHandle_t lora_net_tx_handle; 
+uint8_t ack_wait_id = 0;    
+static uint8_t ra_pid = 0;  
+int16_t _last_seen_pid[255]; 
+static int16_t _last_ra[255]; 
+SemaphoreHandle_t m_ack_Semaphore; 
 
-// Function to send a packet and wait for an acknowledgment
+static void ra_handle(LoRaPkg* p, lora_net_hook *hook); 
+/***********************************************************************************
+ * Function name  : send_wait_ack
+ *
+ * Description    : Handles sending a LoRa packet and waits for an ACK within the 
+ *                  specified timeout. Retries sending if no ACK is received.
+ * Parameters     : p     - Pointer to the LoRa package.
+ *                  hook  - Pointer to the network hook for transmission handling.
+ * Returns        : 0 on success (ACK received), -1 on failure (ACK not received).
+ *
+ * Known Issues   : None
+ * Note           : Utilizes a retry mechanism and a semaphore for synchronization.
+ * Author         : C.venkataSuresh
+ * Date           : 20SEP2024
+ ***********************************************************************************/
 static int8_t send_wait_ack(LoRaPkg* p, lora_net_hook* hook)
 {
-    uint8_t tries = 0; // Number of attempts to receive an ACK
-    ack_time = esp_timer_get_time(); // Record the current time using ESP32 timer functions
-
+    uint8_t tries = 0; 
+    ack_time = RTOS_TIME; 
     while (tries < ACK_MAX) {
-        ESP_LOGI(TAG, "L3: ack pid: %d, tries: %d", ack_wait_id, tries); // Debug log for ACK attempt
-        NET_TX(p, mac_tx_buf, portMAX_DELAY, hook); // Send the packet
-
-        // Wait for semaphore indicating MAC layer transmission is done
-        if (xSemaphoreTake(m_ack_Semaphore, portMAX_DELAY) == pdTRUE) {
-            ack_time = esp_timer_get_time(); // Update the current time
-
-            // Wait for task notification indicating ACK received within the timeout period
-            if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(ACK_TIMEOUT)) != 0) {
-                net_tx_ack_ok++; // Increment ACK success counter
-                ESP_LOGI(TAG, "L3: ack ok!"); // Debug log for successful ACK
-                return 0; // Return success
-            }
-        }
-
-        tries++; // Increment retry counter
-        net_tx_ack_retry++; // Increment retry counter
+        ESP_LOGI(TAG, "L3: ack pid: %d, tries: %d", ack_wait_id, tries); 
+        NET_TX(p, mac_tx_buf, portMAX_DELAY, hook); 
+        xSemaphoreTake(m_ack_Semaphore, portMAX_DELAY);
+       	ack_time = RTOS_TIME; 
+        if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(ACK_TIMEOUT)) != 0) 
+        {
+			net_tx_ack_ok++; 
+           	ESP_LOGI(TAG, "L3: ack ok!"); 
+         	return 0; 
+       	}
+        tries++; 
+        net_tx_ack_retry++; 
     }
-
-    net_tx_ack_fail++; // Increment ACK failure counter
-    ESP_LOGI(TAG, "L3: ack failed!"); // Debug log for failed ACK
-    return -1; // Return failure
+    net_tx_ack_fail++; 
+    ESP_LOGI(TAG, "L3: ack failed!"); 
+    return -1; 
 }
-
-
-// Task for handling network layer transmission
+/***********************************************************************************
+ * Function name  : lora_net_tx_task
+ *
+ * Description    : LoRa network transmission task. 
+ * Parameters     : pvParameter - Pointer to network parameters (mac_net_param_t).
+ * Returns        : None (void).
+ *
+ * Known Issues   : None
+ * Note           : Implements a retry mechanism for ACK-based transmissions. 
+ * Author         : C. VenkataSuresh
+ * Date           : 20SEP2024
+ ***********************************************************************************/
 void lora_net_tx_task(void *pvParameter)
 {
-    mac_net_param_t *param = (mac_net_param_t *)pvParameter; // Get network parameters
-    lora_net_hook *hook = &(param->net_hooks); // Get network hooks
-    LoRaPkg p, t; // Packet variables
-    int8_t nexthop; // Next hop for packet forwarding
+    mac_net_param_t *param = (mac_net_param_t *)pvParameter; 
+    lora_net_hook *hook = &(param->net_hooks); 
+    LoRaPkg p, t; 
+    int8_t nexthop; 
 
     while (1) {
-        if (xQueueReceive(net_tx_buf, &p, portMAX_DELAY) == pdPASS) // Receive packet from transmission queue
+        if (xQueueReceive(net_tx_buf, &p, portMAX_DELAY) == pdPASS) 
         {
             // Skip processing if the destination is local
             if (p.Header.NetHeader.dst == Route.getNetAddr())
                 continue;
-
-            // Determine the transmission scenario based on the destination address
             if (p.Header.NetHeader.dst == NET_BROADCAST_ADDR) {
-                // Broadcast packet: use MAC broadcast address
                 p.Header.MacHeader.dst = MAC_BROADCAST_ADDR;
-                NET_TX(&p, mac_tx_buf, portMAX_DELAY, hook); // Send the broadcast packet
-                ESP_LOGI(TAG, "L3: Tx broadcast pkg!"); // Debug log for broadcast
+                NET_TX(&p, mac_tx_buf, portMAX_DELAY, hook);
+                ESP_LOGI(TAG, "L3: Tx broadcast pkg!");
             } else {
-                // Unicast packet: determine next hop
-                nexthop = Route.getRouteTo(p.Header.NetHeader.dst); // Get the next hop for the destination
+                nexthop = Route.getRouteTo(p.Header.NetHeader.dst);
                 if (nexthop < 0) {
-                    // No route found: send route advertisement (RA)
-                    net_tx_drop++; // Increment drop counter
-                    GEN_Route_Adv(t, p.Header.NetHeader.dst); // Generate RA packet
+                    net_tx_drop++; 
+                    GEN_Route_Adv(t, p.Header.NetHeader.dst);
                     ESP_LOGI(TAG, "L3: No route to: 0x%02x, send Routte_Adv, pid: %d", p.Header.NetHeader.dst, t.Header.NetHeader.pid); // Debug log for RA
-                    NET_TX(&t, mac_tx_buf, portMAX_DELAY, hook); // Send RA packet
+                    NET_TX(&t, mac_tx_buf, portMAX_DELAY, hook);
                 } else {
-                    // Forward packet to next hop
-                    net_fwd_done++; // Increment forwarding done counter
-                    p.Header.MacHeader.dst = nexthop; // Set the MAC address of the next hop
-                    ESP_LOGI(TAG, "L3: Tx dst: 0x%02x, nh: 0x%02x", p.Header.NetHeader.dst, nexthop); // Debug log for forwarding
+                    net_fwd_done++;
+                    p.Header.MacHeader.dst = nexthop;
+                    ESP_LOGI(TAG, "L3: Tx dst: 0x%02x, nh: 0x%02x", p.Header.NetHeader.dst, nexthop);
 
                     if (p.Header.type == TYPE_DATA && p.Header.NetHeader.ack == ACK) {
-                        p.Header.NetHeader.pid = ack_wait_id; // Set packet ID for ACK
+                        p.Header.NetHeader.pid = ack_wait_id;
                         if (send_wait_ack(&p, hook) < 0) {
-                            Route.delRouteByNexthop(nexthop); // Delete route if ACK failed
+                            Route.delRouteByNexthop(nexthop);
                         }
-                        ack_wait_id++; // Increment ACK wait ID
+                        ack_wait_id++;
                     } else {
-                        NET_TX(&p, mac_tx_buf, portMAX_DELAY, hook); // Send packet without waiting for ACK
-                        ESP_LOGI(TAG, "L3: Tx without ack done!"); // Debug log for non-ACK packet
+                        NET_TX(&p, mac_tx_buf, portMAX_DELAY, hook);
+                        ESP_LOGI(TAG, "L3: Tx without ack done!"); 
                     }
                 }
             }
@@ -201,49 +216,126 @@ void lora_net_tx_task(void *pvParameter)
     }
 }
 
-// Task for handling network layer reception
+/***********************************************************************************
+ * Function name  : lora_net_rx_task
+ *
+ * Description    : LoRa network reception task. 
+ * Parameters     : pvParameter - Pointer to network parameters (mac_net_param_t).
+ * Returns        : None (void).
+ *
+ * Known Issues   : None
+ * Note           : Manages packet handling for the current node or broadcast messages.
+ * Author         : Naveen GS
+ * Date           : 20SEP2024
+ ***********************************************************************************/
 void lora_net_rx_task (void * pvParameter)
 {
-	mac_net_param_t *param = (mac_net_param_t *)pvParameter; // Get network parameters
-	lora_net_hook *hook = &(param->net_hooks); // Get network hooks
-	memset(_last_seen_pid, -1, 255); // Initialize last seen packet IDs to -1
-	memset(_last_ra, -1, 255); // Initialize last route advertisements to -1
-	LoRaPkg p, t; // Packet variables
+	mac_net_param_t *param = (mac_net_param_t *)pvParameter; 
+	lora_net_hook *hook = &(param->net_hooks); 
+	memset(_last_seen_pid, -1, 255); 
+	memset(_last_ra, -1, 255); 
+	LoRaPkg p, t; 
 	
 	while (1) {
 		if ( xQueueReceive(mac_rx_buf, &p, portMAX_DELAY) == pdPASS) // Receive packet from MAC layer queue
 		{
-			/* Check if the packet is for this node or broadcast */
 			if (p.Header.NetHeader.dst == Route.getNetAddr()
 					|| p.Header.NetHeader.dst == NET_BROADCAST_ADDR) {
 				switch((uint8_t)p.Header.type) {
-					case TYPE_DATA: // Data packet
-						ESP_LOGI(TAG,"L3: recv TYPE_DATA"); // Debug log for received data
-						NET_RX(&p, net_rx_buf, 0, hook); // Send to network layer receive queue
+					case TYPE_DATA: 
+						ESP_LOGI(TAG,"L3: recv TYPE_DATA"); 
+						NET_RX(&p, net_rx_buf, 0, hook); 
 						break;
-					case TYPE_DATA_ACK: // Data acknowledgment
+					case TYPE_DATA_ACK: 
 						break;
-					case TYPE_RA: // Route advertisement
-						if (_last_ra[p.Header.NetHeader.src] == p.Header.NetHeader.pid) // Check if already seen
-							break;
-						_last_ra[p.Header.NetHeader.src] = p.Header.NetHeader.pid; // Update last route advertisement
-						ESP_LOGI(TAG,"L3: recv TYPE_RA from %d, pid %d", p.Header.NetHeader.src, p.Header.NetHeader.pid); // Debug log for RA
-						NET_RX(&p, net_rx_buf, 0, hook); // Send RA to network layer receive queue
+					case TYPE_PING: 
+						if (p.Header.NetHeader.ack == ACK_NO) 
+						{
+							ESP_LOGI(TAG,"L3: recv TYPE_PING, send ping ack"); /* send pingack */
+							GEN_PING_ACK(t, p); 
+							xQueueSend(net_tx_buf, &t, portMAX_DELAY);
+						} else {
+							ESP_LOGI(TAG,"L3: recv ping ack"); /* It is a pingack */
+							NET_RX(&p, net_rx_buf, 0, hook);
+						}
 						break;
-					case TYPE_PING: // Ping request
-						GEN_PING_ACK(t, p); // Generate ping acknowledgment
-						NET_TX(&t, mac_tx_buf, portMAX_DELAY, hook); // Send ping acknowledgment
-						ESP_LOGI(TAG,"L3: recv TYPE_PING, sent PINGACK!"); // Debug log for ping acknowledgment
+					case TYPE_RA: 
+						ESP_LOGI(TAG,"L3: recv TYPE_RA"); 
+						ra_handle(&p, hook);
 						break;
 					default:
+						net_rx_drop++; 
 						break;
 				}
-			} else if (p.Header.NetHeader.dst == MAC_BROADCAST_ADDR) {
-				NET_RX(&p, net_rx_buf, 0, hook); // Broadcast packet: send to network layer receive queue
+			} else {
+				if (p.Header.NetHeader.hop < MAX_HOPS ) {
+					if (hook->netForward != NULL)
+						hook->netForward();
+					ESP_LOGI(TAG,"L3: forward, send to net_tx_buf");
+					p.Header.NetHeader.hop++;
+					xQueueSend(net_tx_buf, &p, portMAX_DELAY);
+				} else {
+					ESP_LOGI(TAG,"L3: hop max, drop!");
+					net_fwd_err++; net_rx_drop++;
+				}
 			}
 		}
 	}
 }
-
+/***********************************************************************************
+ * Function name  : send_ra_respon
+ * Description    : Handles the reception of a Route Advertisement (RA) package and sends 
+ *                  a Route Advertisement Response (RA_RESPON) if the RA packet is new.
+ * Parameters     : p - Pointer to the LoRa package (LoRaPkg*).
+ *                  hook - Pointer to the network hook (lora_net_hook*).
+ * Returns        : None (void).
+ * Known Issues   : None
+ * Note           : 
+ * Author         : C.VenkataSuresh
+ * Date           : 20SEP2024
+ ***********************************************************************************/	
+static void send_ra_respon(LoRaPkg* p, lora_net_hook *hook)
+{
+	ESP_LOGI(TAG,"L3: recv RA from: 0x%02x, pid: %d, last pid: %d",
+		p->Header.NetHeader.src ,p->Header.NetHeader.pid, _last_ra[p->Header.NetHeader.src]);
+	
+	if (p->Header.NetHeader.pid != _last_ra[p->Header.NetHeader.src])
+	{
+		ESP_LOGI(TAG,"L3: send RA_RESPON to ndst: 0x%02x!", p->Header.NetHeader.src);
+		_last_ra[p->Header.NetHeader.src] = p->Header.NetHeader.pid;
+		
+		p->Header.NetHeader.subtype = SUB_RA_RESPON;
+		p->Header.NetHeader.dst = p->Header.NetHeader.src;
+		p->Header.NetHeader.src = Route.getNetAddr();
+		p->Header.NetHeader.hop = 0;
+		
+		//NRF_LOG_HEX_DBG(p, sizeof(LoRaPkg));
+		xQueueSend(net_tx_buf, p, portMAX_DELAY);
+	} else {
+		ESP_LOGI(TAG,"L3: dup RA, drop!");
+	}
+}
+/***********************************************************************************
+ * Function name  : ra_handle
+ * Description    : Handles Route Advertisement (RA) packets by determining the subtype 
+ *                  and calling the appropriate handler function (RA_RESPON, RA_FAIL, etc.).
+ * Parameters     : p - Pointer to the LoRa package (LoRaPkg*).
+ *                  hook - Pointer to the network hook (lora_net_hook*).
+ * Returns        : None (void).
+ * Known Issues   : None
+ * Note           : 
+ * Author         : C.VenkataSuresh
+ * Date           : 20SEP2024
+ ***********************************************************************************/
+static void ra_handle(LoRaPkg* p, lora_net_hook *hook)
+{
+	switch (p->Header.NetHeader.subtype) {
+		case SUB_RA: send_ra_respon(p, hook);
+			break;
+		case SUB_RA_RESPON: break;
+		case SUB_RA_FAIL: break; /* TODO */
+		default: break;
+	}
+}
 
 
