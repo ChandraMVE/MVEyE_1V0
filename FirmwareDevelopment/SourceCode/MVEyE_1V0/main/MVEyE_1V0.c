@@ -399,12 +399,13 @@ void mac_cad_done_hook (void) {
 }*/
 void app_main(void)
 {
-	esp_log_level_set("*", ESP_LOG_DEBUG);
+	//esp_log_level_set("*", ESP_LOG_DEBUG);
+	vTaskDelay(pdMS_TO_TICKS(5000));
 	ESP_LOGW(TAG,"HI, i am in main");
+	
     TimerHandle_t LinkQMap_timer; 
     ESP_LOGI(TAG, "Compile Time: %s %s", __DATE__, __TIME__); 
    	LoRaAppInit();
-    SetCadParams(5, 0x03, 0x0A, 0x00, 1000); // Set CAD parameters: symbol number 5, detection peak 0x03, detection minimum 0x0A, exit mode 0x00, and timeout 1000 ms.
     SetCad(); // Apply the CAD settings.
 
 	//get status
@@ -442,19 +443,18 @@ void app_main(void)
             xTaskCreate(lora_net_rx_task, "lora_net_rx", configMINIMAL_STACK_SIZE + 200, 
                 &param, 2, &lora_net_rx_handle); // Task for LoRa network reception.
 
-            xTaskCreate(app_recv_task, "app_recv", configMINIMAL_STACK_SIZE + 200, 
+            xTaskCreate(app_recv_task, "app_recv", configMINIMAL_STACK_SIZE + 500, 
                 NULL, 1, &app_recv_handle); // Task for receiving application data.
 
-            xTaskCreate(app_stat_task, "app_stat", configMINIMAL_STACK_SIZE + 100, 
+            xTaskCreate(app_stat_task, "app_stat", configMINIMAL_STACK_SIZE + 500, 
                 NULL, 1, &app_stat_handle); // Task for handling application statistics.
 
-            xTaskCreate(app_ping_task, "app_ping", configMINIMAL_STACK_SIZE + 100, 
+            xTaskCreate(app_ping_task, "app_ping", configMINIMAL_STACK_SIZE + 500, 
                 NULL, 1, &app_ping_handle); // Task for handling application pings.
 
             LinkQMap_timer = xTimerCreate("LQM_timer", pdMS_TO_TICKS(LINKQMAP_CLEAR_PERIOD), 
                 pdTRUE, 0, Route.clearLinkQuailtyMapTimer); // Timer to clear the link quality map at intervals defined by LINKQMAP_CLEAR_PERIOD.
             xTimerStart(LinkQMap_timer, 0); // Start the timer.
-
             ESP_LOGI(TAG," lora mesh starting..."); // Log the start of the LoRa mesh network.
             //SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
             vTaskStartScheduler(); // Start the FreeRTOS scheduler, which will manage the tasks.
