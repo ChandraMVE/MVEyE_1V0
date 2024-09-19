@@ -106,28 +106,26 @@ void forward_message(MeshPacket* packet);
 
 	for(int i = 0;i < sizeof(MeshPacket); i++)
 	{
-		ESP_LOGI(TAG, "Buffer:%d",buffer[i]);
+		//ESP_LOGI(TAG, "Buffer:%d",buffer[i]);
 	}
-	
-	while(1) {
-		//TickType_t nowTick = xTaskGetTickCount();
 
+	
+	while(1) 
+	{
 		// Wait for transmission to complete
 		if (LoRaSend(buffer, sizeof(MeshPacket), LLCC68_TXMODE_SYNC)) 
 		{	
 			// Print the data to be transmitted
-        	ESP_LOGI(TAG, "Transmitting Message:");
-        	ESP_LOGI(TAG, "Sender ID: %d", packet.senderID);
-        	ESP_LOGI(TAG, "Destination ID: %d", packet.destinationID);
-        	ESP_LOGI(TAG, "Hop Count: %d", packet.hopCount);
-        	ESP_LOGI(TAG, "Payload: %s", packet.payload);	
+        	ESP_LOGI(TAG, "Transmitting Message-> SendID: %d DestID: %d HopCount: %d PayLoad: %s\r\n",
+        	packet.senderID, packet.destinationID, packet.hopCount, packet.payload);
         	
-         ESP_LOGI(pcTaskGetName(NULL), "Ping message sent");
-        } else {
+         	ESP_LOGI(pcTaskGetName(NULL), "Ping message sent");
+        } 
+        else 
+        {
             ESP_LOGE(pcTaskGetName(NULL), "Ping message failed");
         }	
-        
-                vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
 
@@ -163,7 +161,6 @@ void forward_message(MeshPacket* packet);
 			if (receivedPacket.destinationID == DEVICE_ID) {
                 ESP_LOGI(TAG, "Message received for me: %s", receivedPacket.payload);
                
-
                  // Send the response
                 receivedPacket.senderID = DEVICE_ID;
                 receivedPacket.destinationID = receivedPacket.senderID;
@@ -183,10 +180,10 @@ void forward_message(MeshPacket* packet);
         vTaskDelay(1); // Avoid WatchDog alerts
     }
     
-    			for(int i = 0; i < sizeof( buffer ); i++ )
-				{
-					ESP_LOGI(TAG, "Received information %d", buffer[i]);
-				}	
+	for(int i = 0; i < sizeof( buffer ); i++ )
+	{
+		//ESP_LOGI(TAG, "Received information %d", buffer[i]);	
+	}
 }               
                               
 /*******************************************************************************

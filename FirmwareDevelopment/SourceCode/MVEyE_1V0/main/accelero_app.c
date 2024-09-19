@@ -84,29 +84,6 @@ static void IRAM_ATTR gpio_isr_handler(void* arg)
     xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
 }
 
-/***********************************************************************************
- * Function name  : accelero_gpio_interrupt_task
- *
- * Description    : accelero_gpio_interrupt_task.
- * Parameters     : pointer arguments
- * Returns        : None
- *
- * Known Issues   :
- * Note           :
- * author         : Naveen GS
- * date           : 09SEP2024
- ***********************************************************************************/
-static void accelero_gpio_interrupt_task(void* arg)
-{
-    uint32_t io_num;
-    for (;;) {
-        if (xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
-            printf("GPIO[%"PRIu32"] intr, val: %d\n", io_num, gpio_get_level(io_num));
-            printf(" Acceleration X, Y, Z = %f %f %f\r\n", axisAccel(X), axisAccel(Y), axisAccel(Z));
-        }
-    }
-}
-
 /*****************************************************************************************
  * Function name  : config_accelero_interrupt
  *
@@ -123,9 +100,7 @@ void config_accelero_interrupt()
 {
     //create a queue to handle gpio event from isr
     gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
-    //start gpio task
-    xTaskCreate(accelero_gpio_interrupt_task, "accelero_gpio_interrupt_task", 2048, NULL, 10, NULL);
-    	
+
     //zero-initialize the config structure.
     gpio_config_t io_conf = {};
     
@@ -151,23 +126,20 @@ void config_accelero_interrupt()
     gpio_isr_handler_remove(GPIO_INPUT_IO_34);
     //hook isr handler for specific gpio pin again
     gpio_isr_handler_add(GPIO_INPUT_IO_34, gpio_isr_handler, (void*) GPIO_INPUT_IO_34);
-
 }
 
-
-/*******************************************************************************
- * Function name  : Accelerometer_Task
+/***********************************************************************************
+ * Function name  : accelero_gpio_interrupt_task
  *
- * Description    : FreeRTOS task to read and process accelerometer data.
- * Parameters     : None
+ * Description    : accelero_gpio_interrupt_task.
+ * Parameters     : pointer arguments
  * Returns        : None
  *
- * Known Issues   : Ensure task does not block indefinitely.
- * Note           : Static; initialize accelerometer before use.
- * author         : Chandrashekhar Venkatesh
- * date           : 20AUG2024
- ******************************************************************************/
-// Accelerometer task to process data
+ * Known Issues   :
+ * Note           :
+ * author         : Naveen GS
+ * date           : 12SEP2024
+ ***********************************************************************************/
 static void Accelerometer_Task(void *pvParameters) {
     ESP_LOGI(TAG, "Accelero Task Created");
     
@@ -197,13 +169,5 @@ static void Accelerometer_Task(void *pvParameters) {
  ******************************************************************************/
 void create_Accelerometer_task() 
 {
-    xTaskCreate(Accelerometer_Task, "Accelerometer_Task", 2048*2, NULL, 10, NULL);
+    xTaskCreate(Accelerometer_Task, "Accelerometer_Task", 2048*4, NULL, 10, NULL);
 }
-
-
-
-
-
-
-
-
