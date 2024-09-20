@@ -1777,3 +1777,62 @@ void get_llcc68_deveui() {
              rx_data[0], rx_data[1], rx_data[2], rx_data[3],
              rx_data[4], rx_data[5], rx_data[6], rx_data[7]);
 }
+
+/*******************************************************************************
+ * Function name  : RadioSetMaxPayloadLength
+ *
+ * Description    : Set the Max Payload Length. 
+ * Parameters     : packetType, maxPayloadLength.
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Venkata Suresh 
+ * date           : 20SEP2024
+ ******************************************************************************/
+ 
+void RadioSetMaxPayloadLength(uint8_t packetType, uint8_t maxPayloadLength)
+{
+    if (packetType == LLCC68_PACKET_TYPE_LORA) {
+        // Set the maximum payload length for LoRa packets
+        LoRaConfig(7, 125, 1, 8, maxPayloadLength, true, false);
+    } else if (packetType == LLCC68_PACKET_TYPE_GFSK) {
+        // Set the maximum payload length for FSK packets (if needed)
+        LoRaConfig(7, 125, 1, 8, maxPayloadLength, true, false);
+    } 
+    // Add more cases here if there are other packet types to handle
+}
+
+/*******************************************************************************
+ * Function name  : GetPayload
+ *
+ * Description    : GetPayload. 
+ * Parameters     : buffer, size, ,axsize.
+ * Returns        : None
+ *
+ * Known Issues   :
+ * Note           :
+ * author         : Venkata Suresh 
+ * date           : 20SEP2024
+ ******************************************************************************/
+ 
+uint8_t GetPayload(uint8_t buffer, uint8_t size, uint8_t maxSize)
+{
+    uint8_t offset = 0; // Buffer offset
+
+    // Get the payload length and starting offset from the LoRa receive buffer
+    GetRxBufferStatus(&size, &offset);
+    
+    // Check if the payload size exceeds the provided buffer size
+    if (size > maxSize)
+    {
+        // Payload is too large for the buffer
+        return 1;
+    }
+
+    // Read the payload from the LoRa module into the buffer
+    ReadBuffer(&buffer, size);
+
+    // Return success
+    return 0;
+}

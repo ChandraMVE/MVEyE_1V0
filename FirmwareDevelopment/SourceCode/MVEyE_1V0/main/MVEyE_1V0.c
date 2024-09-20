@@ -63,6 +63,8 @@
 #include "mqtt_client.h"
 
 #include "MVEyE_1V0.h"
+#include "LoRa_Mesh_app.h"
+
 //==============================================================================
 //   __   ___  ___         ___  __
 //  |  \ |__  |__  | |\ | |__  /__`
@@ -158,7 +160,6 @@ void app_main(void)
     init_leds();
     create_leds_task();
     
-<<<<<<< HEAD
     LoRaAppInit();
     
     init_spi();
@@ -168,25 +169,19 @@ void app_main(void)
     get_llcc68_version();
     get_llcc68_deveui();
         
-   // create_lora_task();
-    
-    //create_Accelerometer_task();
-    
-    //mqtt_init();
-	//create_mqtt_task();
-=======
+   // create_lora_task();  
+
     // Initialize and handle accelerometer data via Interrupt routine and Task Queue
     create_Accelerometer_task();
     
     // Initialize and configure Lora and tasks to handle ping pong data    
     //LoRaAppInit();
     //create_lora_task();
->>>>>>> 5eeff62e1b590c8282eb6036e50a184c624a65b2
     
     // Initialize MQTT, WIFI settings and events to handle publish and subscribe topics
     mqtt_init();
 	create_mqtt_task();
-    
+    create_mesh_task();
     // Use main Task to handle CLI
 	while(1)
 	{
