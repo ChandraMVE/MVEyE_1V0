@@ -16,6 +16,7 @@
 #include "protocol_examples_common.h"
 #include "example_common_private.h"
 #include "esp_log.h"
+#include "../../main/MVEyE_1V0.h"
 
 #if CONFIG_EXAMPLE_CONNECT_WIFI
 
@@ -63,9 +64,12 @@ static int s_retry_num = 0;
 static void example_handler_on_wifi_disconnect(void *arg, esp_event_base_t event_base,
                                int32_t event_id, void *event_data)
 {
+	set_wifi_connected(false);
+#if 1	
     s_retry_num++;
-    if (s_retry_num > CONFIG_EXAMPLE_WIFI_CONN_MAX_RETRY) {
-        ESP_LOGI(TAG, "WiFi Connect failed %d times, stop reconnect.", s_retry_num);
+    //if (s_retry_num > CONFIG_EXAMPLE_WIFI_CONN_MAX_RETRY) 
+    {
+        //ESP_LOGI(TAG, "WiFi Connect failed %d times, stop reconnect.", s_retry_num);
         /* let example_wifi_sta_do_connect() return */
         if (s_semph_get_ip_addrs) {
             xSemaphoreGive(s_semph_get_ip_addrs);
@@ -75,8 +79,9 @@ static void example_handler_on_wifi_disconnect(void *arg, esp_event_base_t event
             xSemaphoreGive(s_semph_get_ip6_addrs);
         }
 #endif
-        return;
+        //return;
     }
+#endif
     ESP_LOGI(TAG, "Wi-Fi disconnected, trying to reconnect...");
     esp_err_t err = esp_wifi_connect();
     if (err == ESP_ERR_WIFI_NOT_STARTED) {
@@ -88,6 +93,8 @@ static void example_handler_on_wifi_disconnect(void *arg, esp_event_base_t event
 static void example_handler_on_wifi_connect(void *esp_netif, esp_event_base_t event_base,
                             int32_t event_id, void *event_data)
 {
+	set_wifi_connected(true);
+	
 #if CONFIG_EXAMPLE_CONNECT_IPV6
     esp_netif_create_ip6_linklocal(esp_netif);
 #endif // CONFIG_EXAMPLE_CONNECT_IPV6
@@ -241,8 +248,8 @@ esp_err_t example_wifi_connect(void)
     wifi_config_t wifi_config = {
         .sta = {
 #if !CONFIG_EXAMPLE_WIFI_SSID_PWD_FROM_STDIN
-            .ssid = CONFIG_EXAMPLE_WIFI_SSID,
-            .password = CONFIG_EXAMPLE_WIFI_PASSWORD,
+            .ssid = CONFIG_USER_WIFI_SSID,//CONFIG_EXAMPLE_WIFI_SSID
+            .password = CONFIG_USER_WIFI_PASSWORD,//CONFIG_EXAMPLE_WIFI_PASSWORD
 #endif
             .scan_method = EXAMPLE_WIFI_SCAN_METHOD,
             .sort_method = EXAMPLE_WIFI_CONNECT_AP_SORT_METHOD,
@@ -270,6 +277,8 @@ esp_err_t example_wifi_connect(void)
         wifi_config.sta.threshold.authmode = WIFI_AUTH_OPEN;
     }
 #endif
+
+    ESP_LOGI(TAG, "SSID: = %s PWD: = %s\r\n", wifi_config.sta.ssid, wifi_config.sta.password);
     return example_wifi_sta_do_connect(wifi_config, true);
 }
 

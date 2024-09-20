@@ -114,6 +114,7 @@ __attribute__ ((weak, alias ("LoRaErrorDefault"))) void LoRaError(int error);
  ******************************************************************************/
  void LoRaInit(void)
 {
+#if 0
 	ESP_LOGI(TAG, "CONFIG_MISO_GPIO=%d", CONFIG_MISO_GPIO);
 	ESP_LOGI(TAG, "CONFIG_MOSI_GPIO=%d", CONFIG_MOSI_GPIO);
 	ESP_LOGI(TAG, "CONFIG_SCLK_GPIO=%d", CONFIG_SCLK_GPIO);
@@ -125,7 +126,7 @@ __attribute__ ((weak, alias ("LoRaErrorDefault"))) void LoRaError(int error);
 	ESP_LOGI(TAG, "LORA_DIO1=%d",LORA_DIO1);
 	ESP_LOGI(TAG, "LORA_DIO2=%d",LORA_DIO2);
 	ESP_LOGI(TAG, "LORA_DIO3=%d",LORA_DIO3);
-
+#endif
 
 	txActive = false;
 	debugPrint = false;

@@ -62,6 +62,7 @@
 #include "MQTT_app.h"
 #include "mqtt_client.h"
 
+#include "MVEyE_1V0.h"
 //==============================================================================
 //   __   ___  ___         ___  __
 //  |  \ |__  |__  | |\ | |__  /__`
@@ -76,7 +77,17 @@
 //  \__> |___ \__/ |__) /~~\ |___     \/  /~~\ |  \ .__/
 //
 //==============================================================================
+bool is_wifi_connected = false;
 
+bool get_wifi_connected()
+{
+	return is_wifi_connected;
+}
+
+void set_wifi_connected(bool is_connected)
+{
+	is_wifi_connected = is_connected;
+}
 /*******************************************************************************
  * Function name  : get_esp32_version
  *
@@ -116,12 +127,6 @@ void get_esp32_version(void)
            (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
 
     printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-#if 0
-    printf("Restarting now.\n");
-    fflush(stdout);
-    esp_restart();
-#endif
 }
 
 /*******************************************************************************
@@ -139,12 +144,21 @@ void get_esp32_version(void)
  
 void app_main(void)
 {
+	
+	char console_input[100];
+    int len = 0;
+        	
 	vTaskDelay(5000 / portTICK_PERIOD_MS); //Wait for proper debug messages to see.
+	
+	// Set up USB-UART CLI
     get_esp32_version();
+    example_configure_stdin_stdout();
     
+    // Initialize and set up LEDs	    
     init_leds();
     create_leds_task();
     
+<<<<<<< HEAD
     LoRaAppInit();
     
     init_spi();
@@ -160,11 +174,30 @@ void app_main(void)
     
     //mqtt_init();
 	//create_mqtt_task();
+=======
+    // Initialize and handle accelerometer data via Interrupt routine and Task Queue
+    create_Accelerometer_task();
     
-    while(1)
-    {
-		ESP_LOGD(TAG,"MVEyE active");
+    // Initialize and configure Lora and tasks to handle ping pong data    
+    //LoRaAppInit();
+    //create_lora_task();
+>>>>>>> 5eeff62e1b590c8282eb6036e50a184c624a65b2
+    
+    // Initialize MQTT, WIFI settings and events to handle publish and subscribe topics
+    mqtt_init();
+	create_mqtt_task();
+    
+    // Use main Task to handle CLI
+	while(1)
+	{
+		// ignore empty or LF only string
+	    do {
+	        fgets(console_input, 100, stdin);
+	        len = strlen(console_input);
+	    } while (len<=1 && console_input[0] == '\n');
+	    console_input[len - 1] = '\0';
+	    
+	    printf("Received string  = %s\r\n", console_input);
 		vTaskDelay(1000 / portTICK_PERIOD_MS);		
 	}
 }
-
