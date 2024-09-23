@@ -374,7 +374,7 @@ static void _clearLinkQualityMapTimer(TimerHandle_t xTimer) {
             _LinkQuality[i].updated = false; 
         }
     }
-    ESP_LOGI(TAG,"LinkQualityMap clean: %d", cnt);  
+    //ESP_LOGI(TAG,"LinkQualityMap clean: %d", cnt);  
     portEXIT_CRITICAL(&mux);  
 }
 

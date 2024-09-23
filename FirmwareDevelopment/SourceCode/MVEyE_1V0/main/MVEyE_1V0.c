@@ -64,7 +64,7 @@
 
 #include "MVEyE_1V0.h"
 #include "LoRa_Mesh_app.h"
-
+#include "esp_task_wdt.h"
 //==============================================================================
 //   __   ___  ___         ___  __
 //  |  \ |__  |__  | |\ | |__  /__`
@@ -130,7 +130,10 @@ void get_esp32_version(void)
 
     printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
 }
-
+esp_task_wdt_config_t wdt_config = {
+    .timeout_ms = 5000,   // Watchdog timeout in milliseconds
+    .trigger_panic = true         // Trigger panic (reset) on watchdog timeout
+};
 /*******************************************************************************
  * Function name  : app_main
  *
@@ -160,28 +163,30 @@ void app_main(void)
     init_leds();
     create_leds_task();
     
-    LoRaAppInit();
+    //LoRaAppInit();
     
-    init_spi();
+    //init_spi();
     
-    llcc68_reset();
+    //llcc68_reset();
     
-    get_llcc68_version();
-    get_llcc68_deveui();
+    //get_llcc68_version();
+    //get_llcc68_deveui();
         
    // create_lora_task();  
 
     // Initialize and handle accelerometer data via Interrupt routine and Task Queue
-    create_Accelerometer_task();
+    //create_Accelerometer_task();
     
     // Initialize and configure Lora and tasks to handle ping pong data    
     //LoRaAppInit();
     //create_lora_task();
-    
+    //esp_task_wdt_init(&wdt_config);  // Set 5s timeout for WDT
+   // esp_task_wdt_add(NULL);      // Add the main task
     // Initialize MQTT, WIFI settings and events to handle publish and subscribe topics
-    mqtt_init();
-	create_mqtt_task();
-    create_mesh_task();
+    //mqtt_init();
+	//create_mqtt_task();
+	init_dio1_interrupt();
+    Mesh();
     // Use main Task to handle CLI
 	while(1)
 	{
@@ -193,6 +198,7 @@ void app_main(void)
 	    console_input[len - 1] = '\0';
 	    
 	    printf("Received string  = %s\r\n", console_input);
+	    //esp_task_wdt_reset();
 		vTaskDelay(1000 / portTICK_PERIOD_MS);		
 	}
 }

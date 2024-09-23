@@ -21,6 +21,7 @@ void print_pingret (LoRaPkg *p);
 void print_data (LoRaPkg *p);
 void app_ping_task(void * pvParameter);
 void create_mesh_task( void );
+void Mesh(void);
 
 
 

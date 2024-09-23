@@ -42,6 +42,7 @@
 #include "LoRa_Mesh_app.h"
 #include "esp_log.h" 
 #include "LoRa_Mesh_Net.h"
+#include "esp_task_wdt.h"
 //==============================================================================
 //   __   ___  ___         ___  __
 //  |  \ |__  |__  | |\ | |__  /__`
@@ -177,8 +178,10 @@ void lora_net_tx_task(void *pvParameter)
     lora_net_hook *hook = &(param->net_hooks); 
     LoRaPkg p, t; 
     int8_t nexthop; 
-
+    
+	//esp_task_wdt_add(NULL);
     while (1) {
+		ESP_LOGI(TAG,"I am in LoRa Net");
         if (xQueueReceive(net_tx_buf, &p, portMAX_DELAY) == pdPASS) 
         {
             // Skip processing if the destination is local
@@ -213,6 +216,8 @@ void lora_net_tx_task(void *pvParameter)
                 }
             }
         }
+       // esp_task_wdt_reset(); // Reset the WDT for this task
+        vTaskDelay(pdMS_TO_TICKS(CAD_PERIOD_MS));
     }
 }
 
@@ -235,8 +240,10 @@ void lora_net_rx_task (void * pvParameter)
 	memset(_last_seen_pid, -1, 255); 
 	memset(_last_ra, -1, 255); 
 	LoRaPkg p, t; 
+	//esp_task_wdt_add(NULL);
 	
 	while (1) {
+		ESP_LOGI(TAG,"I am in LoRa Net2");
 		if ( xQueueReceive(mac_rx_buf, &p, portMAX_DELAY) == pdPASS) // Receive packet from MAC layer queue
 		{
 			if (p.Header.NetHeader.dst == Route.getNetAddr()
@@ -280,6 +287,8 @@ void lora_net_rx_task (void * pvParameter)
 				}
 			}
 		}
+		//esp_task_wdt_reset(); // Reset the WDT for this task
+		vTaskDelay(pdMS_TO_TICKS(CAD_PERIOD_MS));
 	}
 }
 /***********************************************************************************

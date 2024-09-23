@@ -531,7 +531,7 @@ void 	lora_read_version_register(void);
 #endif
 
 void 	RadioSetMaxPayloadLength(uint8_t packetType, uint8_t maxPayloadLength);
-uint8_t GetPayload(uint8_t buffer, uint8_t size, uint8_t maxSize);
+uint8_t GetPayload(uint8_t *buffer, uint8_t *size, uint8_t maxSize);
 
 
 #endif /* MAIN_LORA_LLC68_H_ */

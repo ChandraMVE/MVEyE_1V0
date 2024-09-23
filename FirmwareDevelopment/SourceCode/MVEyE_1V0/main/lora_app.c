@@ -120,8 +120,7 @@ void forward_message(MeshPacket* packet);
         	packet.senderID, packet.destinationID, packet.hopCount, packet.payload);
         	
          	ESP_LOGI(pcTaskGetName(NULL), "Ping message sent");
-        } 
-        else 
+        } else 
         {
             ESP_LOGE(pcTaskGetName(NULL), "Ping message failed");
         }	
@@ -145,8 +144,8 @@ void forward_message(MeshPacket* packet);
  {
 	 ESP_LOGI(pcTaskGetName(NULL), "Start");
 	 
-	uint8_t txData[256]; // Maximum Payload size of SX1261/62/68 is 255
-	uint8_t rxData[256]; // Maximum Payload size of SX1261/62/68 is 255
+	//uint8_t txData[256]; // Maximum Payload size of SX1261/62/68 is 255
+	//uint8_t rxData[256]; // Maximum Payload size of SX1261/62/68 is 255
 	
 	MeshPacket receivedPacket;
 	

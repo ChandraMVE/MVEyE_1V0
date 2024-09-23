@@ -1795,10 +1795,10 @@ void RadioSetMaxPayloadLength(uint8_t packetType, uint8_t maxPayloadLength)
 {
     if (packetType == LLCC68_PACKET_TYPE_LORA) {
         // Set the maximum payload length for LoRa packets
-        LoRaConfig(7, 125, 1, 8, maxPayloadLength, true, false);
+        LoRaConfig(11, LLCC68_LORA_BW_500_0, LLCC68_LORA_CR_4_5, 8, maxPayloadLength, true, false);
     } else if (packetType == LLCC68_PACKET_TYPE_GFSK) {
         // Set the maximum payload length for FSK packets (if needed)
-        LoRaConfig(7, 125, 1, 8, maxPayloadLength, true, false);
+        LoRaConfig(11, LLCC68_LORA_BW_500_0, LLCC68_LORA_CR_4_5, 8, maxPayloadLength, true, false);
     } 
     // Add more cases here if there are other packet types to handle
 }
@@ -1807,7 +1807,7 @@ void RadioSetMaxPayloadLength(uint8_t packetType, uint8_t maxPayloadLength)
  * Function name  : GetPayload
  *
  * Description    : GetPayload. 
- * Parameters     : buffer, size, ,axsize.
+ * Parameters     : buffer, size, ,maxsize.
  * Returns        : None
  *
  * Known Issues   :
@@ -1815,23 +1815,22 @@ void RadioSetMaxPayloadLength(uint8_t packetType, uint8_t maxPayloadLength)
  * author         : Venkata Suresh 
  * date           : 20SEP2024
  ******************************************************************************/
- 
-uint8_t GetPayload(uint8_t buffer, uint8_t size, uint8_t maxSize)
+uint8_t GetPayload(uint8_t *buffer, uint8_t *size, uint8_t maxSize)
 {
     uint8_t offset = 0; // Buffer offset
 
     // Get the payload length and starting offset from the LoRa receive buffer
-    GetRxBufferStatus(&size, &offset);
+    GetRxBufferStatus(size, &offset);
     
     // Check if the payload size exceeds the provided buffer size
-    if (size > maxSize)
+    if (*size > maxSize)
     {
         // Payload is too large for the buffer
         return 1;
     }
 
     // Read the payload from the LoRa module into the buffer
-    ReadBuffer(&buffer, size);
+    ReadBuffer(buffer, *size);
 
     // Return success
     return 0;

@@ -150,7 +150,7 @@ static void Accelerometer_Task(void *pvParameters) {
     for (;;) {
         if (xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
             //printf("GPIO[%"PRIu32"] intr, val: %d\n", io_num, gpio_get_level(io_num));
-            //printf(" Acceleration X, Y, Z = %f %f %f\r\n", axisAccel(X), axisAccel(Y), axisAccel(Z));
+            printf(" Acceleration X, Y, Z = %f %f %f\r\n", axisAccel(X), axisAccel(Y), axisAccel(Z));
         }
     }    
  }
