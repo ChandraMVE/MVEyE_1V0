@@ -419,7 +419,18 @@ void lora_mac_task(void *pvParameter)
 	}
 
 }
-
+/***********************************************************************************
+ * Function name  : RadioStartCad
+ *
+ * Description    : This function initiates the Channel Activity Detection (CAD)
+ *                  process for LoRa communication. 
+ * Parameters     : None.
+ * Returns        : None (void).
+ * Known Issues   : None.
+ * Note           : 
+ * Author         : C.VenkataSuresh
+ * Date           : 20SEP2024
+ ***********************************************************************************/
 void RadioStartCad( void )
 {
     SetDioIrqParams( LLCC68_IRQ_CAD_DONE | LLCC68_IRQ_CAD_DETECTED, 
