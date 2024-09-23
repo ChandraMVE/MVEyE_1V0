@@ -1,0 +1,249 @@
+[33mcommit beb91b2d6c225a4b5299ee8b8eb2e54d83296dfa[m[33m ([m[1;36mHEAD -> [m[1;32mdevelopment_naveen_accelero_merge[m[33m)[m
+Author: Naveen G S <naveen@microvisionelectronics.com>
+Date:   Fri Sep 13 18:46:24 2024 +0530
+
+    1. Seemless WiFi connect, disconnect handled.
+    2. Seemless MQTT connect, disconnect handled.
+    3. Subscribe only once and publish periodically is handled.
+    4. Tested pub, sub with MQTT Explorer.
+    5. Topic and its data structure is not yet defined.
+    
+    Signed-off-by: Naveen G S <naveen@microvisionelectronics.com>
+
+[33mcommit 8d12d4b22f235ec863b91771dd138e7b551d0408[m
+Author: Naveen G S <naveen@microvisionelectronics.com>
+Date:   Fri Sep 13 17:35:34 2024 +0530
+
+    Testing Subscribe Once and publish periodically.
+    
+    Signed-off-by: Naveen G S <naveen@microvisionelectronics.com>
+
+[33mcommit 2e4a28ee6f490c630da30a88f4eb84399efb7fa5[m
+Author: Naveen G S <naveen@microvisionelectronics.com>
+Date:   Fri Sep 13 15:16:17 2024 +0530
+
+    1. Created main header file for configuring WIFI and MQTT settings.
+    2. ToDo: CLI based configuration setting
+    
+    Signed-off-by: Naveen G S <naveen@microvisionelectronics.com>
+
+[33mcommit 12969258f8cc8a944b341cf0d38497437e01ec68[m
+Author: Naveen G S <naveen@microvisionelectronics.com>
+Date:   Fri Sep 13 13:21:59 2024 +0530
+
+    1. added USB-UART CLI.
+    2. MQTT Crashing, need to check.
+    
+    Signed-off-by: Naveen G S <naveen@microvisionelectronics.com>
+
+[33mcommit 8dcd53a713103c96d5b910f1859a983916ca348a[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Merge: 17f9c86 f10998c
+Author: NaveenMVE <114650183+NaveenMVE@users.noreply.github.com>
+Date:   Wed Sep 11 11:57:45 2024 +0530
+
+    Merge pull request #9 from ChandraMVE/development_naveen_accelero_merge
+    
+    MQTT Example SDK is taken as reference configuration.
+
+[33mcommit f10998cf899393d4a23840d44f65e25853a6e958[m[33m ([m[1;31morigin/development_naveen_accelero_merge[m[33m)[m
+Author: Naveen G S <naveen@microvisionelectronics.com>
+Date:   Wed Sep 11 11:54:41 2024 +0530
+
+    1. MQTT Example SDK is taken as reference configuration.
+    2. Accelero Interrupt configured at 200Hz.
+    3. MQTT ESP broker: pub, sub added.
+    4. Lora Meshing is in progress.
+    
+    Signed-off-by: Naveen G S <naveen@microvisionelectronics.com>
+
+[33mcommit 17f9c8643a0eeaf0597d1bf02cf5361eb72eabe9[m[33m ([m[1;32mdevelop_naveenGS[m[33m)[m
+Merge: a7045d0 f231e59
+Author: ChandraMVE <113784002+ChandraMVE@users.noreply.github.com>
+Date:   Fri Aug 23 22:17:26 2024 +0530
+
+    Merge pull request #8 from ChandraMVE/Development_Chandra
+    
+    tested 500meter distance
+
+[33mcommit f231e59a6de00185b7582965c4459806a9e3b843[m[33m ([m[1;31morigin/Development_Chandra[m[33m)[m
+Author: Chandrashekhar Venkatesh <chandra.microvision@gmail.com>
+Date:   Fri Aug 23 21:16:43 2024 +0530
+
+    1. SF changed to 11
+    2. bandwidth changed to 500Khz.
+    3. Found problem with hardware filter circuit
+
+[33mcommit a7045d04b10851ac4581c1c7db9ba1c074ef512a[m
+Merge: ff2fac4 9e8af61
+Author: ChandraMVE <113784002+ChandraMVE@users.noreply.github.com>
+Date:   Fri Aug 23 18:24:33 2024 +0530
+
+    Merge pull request #7 from ChandraMVE/Development_Chandra
+    
+    Development chandra
+
+[33mcommit 9e8af6174d470b89decb6f3a24573aa9b7889560[m
+Author: Chandrashekhar Venkatesh <chandra.microvision@gmail.com>
+Date:   Fri Aug 23 17:21:26 2024 +0530
+
+    1. Transmit enable & receive enable leds added
+    2. Transmit will blink green LED
+    3. Blue LED will indicate receive enable
+
+[33mcommit 41c6a6518469a4b5796ca2bce9e1835fa8c1e599[m
+Author: Chandrashekhar Venkatesh <chandra.microvision@gmail.com>
+Date:   Fri Aug 23 17:19:46 2024 +0530
+
+    1. LLCC68 EVM schematic added
+
+[33mcommit c6822642d73261ad5fd430006e90362ef7800129[m
+Author: Chandrashekhar Venkatesh <chandra.microvision@gmail.com>
+Date:   Fri Aug 23 11:01:05 2024 +0530
+
+    1. Project path changed so removed unwanted files
+    2. Update the gitignore according to that
+
+[33mcommit 51a92010f18357e1db2eb75192bc97e755378978[m
+Merge: 41a3fd5 ff2fac4
+Author: Chandrashekhar Venkatesh <chandra.microvision@gmail.com>
+Date:   Fri Aug 23 10:35:42 2024 +0530
+
+    1. Merged working code to new folder structure
+
+[33mcommit 41a3fd526a29621a1333cfe42202520d5dbc572d[m
+Author: Chandrashekhar Venkatesh <chandra.microvision@gmail.com>
+Date:   Thu Aug 22 18:32:31 2024 +0530
+
+    1. Done testing with simple Ping pong application, one device is PING and other is PONG
+    2. Final goal is to port MQTT
+
+[33mcommit cdf4718efbd4eb65f6144d7f65febfdd1fe29b5a[m
+Author: Chandrashekhar Venkatesh <chandra.microvision@gmail.com>
+Date:   Thu Aug 22 15:40:13 2024 +0530
+
+    1. removed old non ported lora drivers, new drivers ported and tested for deafult read/write
+
+[33mcommit 7484ebfe293bdf0ee1413ee06aa0334be98096b4[m
+Author: Chandrashekhar Venkatesh <chandra.microvision@gmail.com>
+Date:   Thu Aug 22 11:17:36 2024 +0530
+
+    1. Updated the lora wrapper file, but still register readwrite not working
+
+[33mcommit ff2fac44948ecd53f1ee566475e625efd4352761[m
+Merge: f472786 bc2ea82
+Author: NaveenMVE <114650183+NaveenMVE@users.noreply.github.com>
+Date:   Wed Aug 21 19:51:16 2024 +0530
+
+    Merge pull request #6 from ChandraMVE/develop_naveenGS
+    
+    Modified git ignore to keep placeholder files.
+
+[33mcommit bc2ea8237c48c8a30b3e09f72e2a8106e7b92737[m[33m ([m[1;31morigin/develop_naveenGS[m[33m)[m
+Author: Naveen G S <naveen@microvisionelectronics.com>
+Date:   Wed Aug 21 19:43:09 2024 +0530
+
+    Modified git ignore to keep placeholder files.
+    
+    Signed-off-by: Naveen G S <naveen@microvisionelectronics.com>
+
+[33mcommit f47278646b3faf3e1bbe80a102e21ce030016e1f[m
+Merge: da3e2cb 79b503c
+Author: NaveenMVE <114650183+NaveenMVE@users.noreply.github.com>
+Date:   Wed Aug 21 19:09:36 2024 +0530
+
+    Merge pull request #5 from ChandraMVE/develop_naveenGS
+    
+    Created Folder Structure for the repository.
+
+[33mcommit 79b503cdc4d1623c0075996b8d3bf499496a42c6[m
+Author: Naveen G S <naveen@microvisionelectronics.com>
+Date:   Wed Aug 21 19:03:13 2024 +0530
+
+    1. Created Folder Structure for the repository.
+    2. Moved Existing files to respective folder.
+    3. Added Read me information.
+    
+    Signed-off-by: Naveen G S <naveen@microvisionelectronics.com>
+
+[33mcommit da3e2cbe73089ff3fedafcccbcb115ce1ed7549d[m[33m ([m[1;32mmain[m[33m)[m
+Merge: eff4f21 75638ee
+Author: ChandraMVE <113784002+ChandraMVE@users.noreply.github.com>
+Date:   Wed Aug 21 18:18:29 2024 +0530
+
+    Merge pull request #4 from ChandraMVE/Development_Chandra
+    
+    Semtec  drivers added & configuration for spi drivers done
+
+[33mcommit 75638ee8c73d4c3be9181279f4f36b369d21d342[m
+Author: Chandrashekhar Venkatesh <chandra.microvision@gmail.com>
+Date:   Wed Aug 21 18:17:00 2024 +0530
+
+    1. Added Semtec drivers.
+    2. Semtec Driver porting still pending
+    3. Lora gpio configurations done
+    4. Lora SPI configuration done
+
+[33mcommit eff4f2146c389de2f697e7859902eb8366ce9fe0[m
+Merge: 0f23924 e1b2be5
+Author: ChandraMVE <113784002+ChandraMVE@users.noreply.github.com>
+Date:   Wed Aug 21 17:10:04 2024 +0530
+
+    Merge pull request #3 from ChandraMVE/Development_Chandra
+    
+    Lora empty drivers added
+
+[33mcommit e1b2be560d06cc51153a896f3a99aa2c7465929f[m
+Author: Chandrashekhar Venkatesh <chandra.microvision@gmail.com>
+Date:   Wed Aug 21 17:09:14 2024 +0530
+
+    1. Lora datasheet added
+    2. Lora empty driver files added
+
+[33mcommit 0f23924aaafaa10d14bfe61f26ab31003287f2e5[m
+Merge: 934028f 899aa33
+Author: ChandraMVE <113784002+ChandraMVE@users.noreply.github.com>
+Date:   Wed Aug 21 15:26:54 2024 +0530
+
+    Merge pull request #2 from ChandraMVE/Development_Chandra
+    
+    accelerometer driver files added
+
+[33mcommit 899aa33e9c22cfd8f3f830bf619423cdbf7a96a1[m
+Author: Chandrashekhar Venkatesh <chandra.microvision@gmail.com>
+Date:   Wed Aug 21 15:24:20 2024 +0530
+
+    1. Accelerometer datasheet added.
+    2. Empty driver files added
+
+[33mcommit 934028f8e733458a9283ee68562ceb0e8a1d37d8[m
+Merge: 8e3de5a 56b665c
+Author: ChandraMVE <113784002+ChandraMVE@users.noreply.github.com>
+Date:   Wed Aug 21 15:14:03 2024 +0530
+
+    Merge pull request #1 from ChandraMVE/Development_Chandra
+    
+    Development chandra
+
+[33mcommit 56b665c7ca6467046a34c3b8eaaa42536dffc847[m
+Author: Chandrashekhar Venkatesh <chandra.microvision@gmail.com>
+Date:   Wed Aug 21 15:11:52 2024 +0530
+
+    1. led new task added and tested, all LEDs blink in seperate LED task
+
+[33mcommit c6de14a3bfbc0a970ecc1013a9c3a4ee19b052fd[m
+Author: Chandrashekhar Venkatesh <chandra.microvision@gmail.com>
+Date:   Wed Aug 21 15:10:58 2024 +0530
+
+    1. Electrical Datasheet of module added
+
+[33mcommit 8e3de5a3c9a7682ab302ddc3fcdd6d3c660f6948[m
+Author: Chandrashekhar Venkatesh <chandra.microvision@gmail.com>
+Date:   Mon Aug 12 18:34:01 2024 +0530
+
+    1. Initial commit with Schematics and example project to print the version
+
+[33mcommit 9290d6bbd075c3415aa7dc0a1830380ed521c01e[m
+Author: ChandraMVE <113784002+ChandraMVE@users.noreply.github.com>
+Date:   Mon Aug 12 18:21:54 2024 +0530
+
+    Initial commit
