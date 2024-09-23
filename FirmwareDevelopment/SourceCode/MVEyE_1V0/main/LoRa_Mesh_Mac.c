@@ -34,15 +34,18 @@
 //
 //==============================================================================
 
+#include "lora_app.h"
 #include "lora_llc68.h"
 #include "stdlib.h"            
 #include "string.h"
-#include "freertos/FreeRTOS.h"           
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"           
 #include "freertos/semphr.h"    
 #include "esp_timer.h"             
 #include "Route.h"         
 #include "esp_log.h"
 #include "LoRa_Mesh_Net.h"
+#include "esp_task_wdt.h"
 
 //==============================================================================
 //   __   ___  ___         ___  __
@@ -62,6 +65,60 @@
 		q.Header.NetHeader.pid = p->Header.NetHeader.pid; \
 	} while (0)
 	
+
+// Interrupt Service Routine (ISR) for handling DIO interrupt
+static void IRAM_ATTR dio1_isr_handler(void *arg) {
+    BaseType_t yield_req = pdFALSE;  
+   	gpio_intr_disable(LORA_DIO1);
+    // Give semaphore from ISR
+    xSemaphoreGiveFromISR(m_irq_Semaphore, &yield_req);
+    // If a higher priority task was woken, yield to it immediately
+    if (yield_req == pdTRUE) {
+        portYIELD_FROM_ISR();  // Perform context switch if required
+    }
+}
+
+void init_dio1_interrupt(void)
+{
+    gpio_config_t io_conf = {
+        .intr_type = GPIO_INTR_POSEDGE,   // Interrupt on Rising edge
+        .mode = GPIO_MODE_INPUT,          // Set pin as input
+        .pin_bit_mask = (1ULL << LORA_DIO1), // Pin mask for DIO1
+        .pull_down_en = 0,                // Disable pull-down
+        .pull_up_en = 1,                  // Enable pull-up
+    };
+    gpio_config(&io_conf);
+
+    gpio_install_isr_service(0);
+
+    gpio_isr_handler_add(LORA_DIO1, dio1_isr_handler, (void*)LORA_DIO1);
+
+    ESP_LOGI(TAG, "DIO1 interrupt initialized on GPIO %d", LORA_DIO1);
+}
+
+
+void enable_dio1_interrupt(void)
+{
+    gpio_intr_enable(LORA_DIO1); // Enable interrupt
+    ESP_LOGI(TAG, "DIO1 interrupt enabled on GPIO %d", LORA_DIO1);
+}
+
+// Disable interrupt for DIO1 pin
+void disable_dio1_interrupt(void)
+{
+    gpio_intr_disable(LORA_DIO1); // Disable interrupt
+    ESP_LOGI(TAG, "DIO1 interrupt disabled on GPIO %d", LORA_DIO1);
+}
+
+#define SET_RADIO(fun, irq) \
+    do { \
+        enable_dio1_interrupt();  \
+        fun; \
+        xSemaphoreTake(m_irq_Semaphore, portMAX_DELAY);  \
+        irq = GetIrqStatus();  \
+        ClearIrqStatus(LLCC68_IRQ_ALL);  \
+        disable_dio1_interrupt(); \
+    } while (0)
 #define IS_IRQ(irq,x) \
 	(((irq) & (x) ) == x)
 
@@ -254,6 +311,7 @@ static void mac_rx_handle(LoRaPkg* p)
  * Author         : Naveen GS
  * Date           : 20SEP2024
  ***********************************************************************************/
+
 void lora_mac_task(void *pvParameter)
 {
     uint8_t irqRegs;
@@ -262,60 +320,70 @@ void lora_mac_task(void *pvParameter)
     uint8_t pkgbuf[255];
     PkgType hdr_type;
     LoRaPkg rxtmp, txtmp;
+    
     SleepParams_t sleepConfig;
-    // Set to warm start with RTC enabled
     sleepConfig.sleepStart = LLCC68_SLEEP_START_WARM;
     sleepConfig.rtcStatus = LLCC68_SLEEP_RTC_ON;
     mac_net_param_t *param = (mac_net_param_t *)pvParameter;
     lora_mac_hook *hook = &(param->mac_hooks);
-    while (1) {
-        SetStandby(LLCC68_STANDBY_RC);
-		LoRaConfig(7, 125, 1, 8, 0, true, false); // Adjust configuration as needed
-        SetCadParams(5, 0x03, 0x0A, 0x00, 1000); // Set CAD parameters
-        SetCad(); // Start CAD
-
-        irqRegs = GetIrqStatus();
-        if (IS_IRQ(irqRegs, LLCC68_IRQ_CAD_DONE)) {
+    //esp_task_wdt_add(NULL);
+    while (1) 
+    {
+       	 ESP_LOGI(TAG,"I am in LoRa Mack");
+	  	 SetStandby(LLCC68_STANDBY_RC);
+     	 SET_RADIO(RadioStartCad(), irqRegs );
+	     ESP_LOGI(TAG,"irqRegs:%d",irqRegs);
+		
+       if (IS_IRQ(irqRegs, LLCC68_IRQ_CAD_DONE)) 
+        {
             phy_cad_done++;
             if (hook->macCadDone != NULL) hook->macCadDone();
-
-            if (IS_IRQ(irqRegs, LLCC68_IRQ_CAD_DETECTED)) {
+			ESP_LOGI(TAG,"macCadDone!");
+            if (IS_IRQ(irqRegs, LLCC68_IRQ_CAD_DETECTED)) 
+            {
                 phy_cad_det++;
+                ESP_LOGI(TAG,"CAD_DETECTED!");
                 if (hook->macCadDetect != NULL) hook->macCadDetect();
-
                 RadioSetMaxPayloadLength( LLCC68_PACKET_TYPE_LORA, 0xff); // Set maximum payload length
                 timer = RTOS_TIME;
                 if (hook->macRxStart != NULL) hook->macRxStart();
-                SetRx(RX_TIMEOUT); // Start RX
+                SET_RADIO(SetRx(RX_TIMEOUT), irqRegs );
+                ESP_LOGI(TAG,"irqRegs2:%d",irqRegs);
                 if (hook->macRxEnd != NULL) hook->macRxEnd();
 
-                //irqRegs = GetIrqStatus();
-                if (IS_IRQ(irqRegs, LLCC68_IRQ_CRC_ERR) || IS_IRQ(irqRegs, LLCC68_IRQ_HEADER_ERR)) {
+                if (IS_IRQ(irqRegs, LLCC68_IRQ_CRC_ERR) || IS_IRQ(irqRegs, LLCC68_IRQ_HEADER_ERR)) 
+                {
                     phy_rx_err++;
                     ESP_LOGI(TAG,"L1: Rx error!");
-                } else if (IS_IRQ(irqRegs, LLCC68_IRQ_TIMEOUT)) {
+                } else if (IS_IRQ(irqRegs, LLCC68_IRQ_TIMEOUT)) 
+                {
                     phy_rx_timeout++;
                     ESP_LOGI(TAG,"L1: Rx timeout!");
-                } else if (IS_IRQ(irqRegs, LLCC68_IRQ_RX_DONE)) {
+                } else if (IS_IRQ(irqRegs, LLCC68_IRQ_RX_DONE)) 
+                {
                     phy_rx_done++;
-                   // pkgsize = 0;
+                   
                     GetPayload(pkgbuf, &pkgsize, sizeof(pkgbuf));
-					ESP_LOGI(TAG, "L1: Rx done, size: %u, time: %lu", pkgsize, (unsigned long)(RTOS_TIME - timer));
+					//ESP_LOGI(TAG, "L1: Rx done, size: %u, time: %lu", pkgsize, (unsigned long)(RTOS_TIME - timer));
 
                     hdr_type = (PkgType)(pkgbuf[0]);
-                    if (hdr_type < TYPE_MAX && pkgsize == pkgSizeMap[hdr_type][1]) {
+                    if (hdr_type < TYPE_MAX && pkgsize == pkgSizeMap[hdr_type][1]) 
+                    {
                         memcpy(&rxtmp, pkgbuf, pkgsize);
                         int8_t rssi, snr;
                         GetPacketStatus(&rssi, &snr);
                         rxtmp.stat.RssiPkt = rssi;
                         rxtmp.stat.SnrPkt = snr;
                         mac_rx_handle(&rxtmp);
+                        ESP_LOGI(TAG, "L1: Rx done");
                     }
-                } else {
+                } else 
+                {
                     phy_rx_err++;
                     ESP_LOGI(TAG,"L1: Rx unknown error!");
                 }
-            } else {
+            } else 
+            {
                 if (uxQueueMessagesWaiting(mac_tx_buf) != 0) {
                     if (tx_timer == 0 && xQueueReceive(mac_tx_buf, &txtmp, 0) == pdPASS) {
                         mac_tx_done++;
@@ -325,7 +393,8 @@ void lora_mac_task(void *pvParameter)
                         txtmp.Header.MacHeader.src = Route.getMacAddr();
                         timer = RTOS_TIME;
                         if (hook->macTxStart != NULL) hook->macTxStart();
-                        LoRaSend((uint8_t *)&txtmp, pkgsize, TX_TIMEOUT);
+                        SET_RADIO(LoRaSend((uint8_t *)&txtmp, pkgsize, TX_TIMEOUT), irqRegs );
+                        ESP_LOGI(TAG,"irqRegs3:%d",irqRegs);
 						if (hook->macTxEnd != NULL) hook->macTxEnd();
 						if (txtmp.Header.type == TYPE_DATA && txtmp.Header.NetHeader.ack == ACK)
                                 xSemaphoreGive(m_ack_Semaphore);
@@ -344,8 +413,17 @@ void lora_mac_task(void *pvParameter)
                 }
             }
         }
-        LLCC68SetSleep(sleepConfig);
+       	LLCC68SetSleep(sleepConfig);
         vTaskDelay(pdMS_TO_TICKS(CAD_PERIOD_MS));
-    }
+    
+	}
+
 }
 
+void RadioStartCad( void )
+{
+    SetDioIrqParams( LLCC68_IRQ_CAD_DONE | LLCC68_IRQ_CAD_DETECTED, 
+                           LLCC68_IRQ_CAD_DONE | LLCC68_IRQ_CAD_DETECTED,
+                           LLCC68_IRQ_NONE, LLCC68_IRQ_NONE );
+    SetCad();
+}
