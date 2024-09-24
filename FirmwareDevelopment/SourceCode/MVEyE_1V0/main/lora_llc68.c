@@ -1835,3 +1835,34 @@ uint8_t GetPayload(uint8_t *buffer, uint8_t *size, uint8_t maxSize)
     // Return success
     return 0;
 }
+/*******************************************************************************
+ * Function: LLCC68SetSleep
+ * Description: Configures the LLCC68 LoRa chip to enter sleep mode.
+ * Parameters: 
+ *   - sleepConfig: Sleep configuration parameters (start type, RTC status).
+ * Returns: None
+ * Author: Venkata Suresh
+ * Date: 20SEP2024
+ ******************************************************************************/
+void SetSleep(SleepParams_t sleepConfig) {
+    uint8_t command = sleepConfig.sleepStart | sleepConfig.rtcStatus;
+    WriteRegister(LLCC68_SLEEP_START_COLD, &command, 1);
+}
+/***********************************************************************************
+ * Function name  : RadioStartCad
+ * Description    : This function initiates the Channel Activity Detection (CAD)
+ *                  process for LoRa communication. 
+ * Parameters     : None.
+ * Returns        : None (void).
+ * Known Issues   : None.
+ * Note           : 
+ * Author         : C.VenkataSuresh
+ * Date           : 20SEP2024
+ ***********************************************************************************/
+void RadioStartCad( void )
+{
+    SetDioIrqParams( LLCC68_IRQ_CAD_DONE | LLCC68_IRQ_CAD_DETECTED, 
+                           LLCC68_IRQ_CAD_DONE | LLCC68_IRQ_CAD_DETECTED,
+                           LLCC68_IRQ_NONE, LLCC68_IRQ_NONE );
+    SetCad();
+}

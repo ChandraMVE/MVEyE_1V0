@@ -38,7 +38,7 @@
 //==============================================================================
 #include "driver/spi_master.h"
 #include "leds.h"
-
+#include "LoRa_Mesh_Net.h"
 //==============================================================================
 //   __   ___  ___         ___  __
 //  |  \ |__  |__  | |\ | |__  /__`
@@ -523,6 +523,11 @@ void 	llcc68_reset();
 void 	get_llcc68_version();
 void 	get_llcc68_deveui();
 
+void 	RadioSetMaxPayloadLength(uint8_t packetType, uint8_t maxPayloadLength);
+uint8_t GetPayload(uint8_t *buffer, uint8_t *size, uint8_t maxSize);
+void 	SetSleep(SleepParams_t sleepConfig);
+void 	RadioStartCad( void );
+
 #if 0
 void 	lora_spi_init(void);
 void 	lora_io_init(void);
@@ -530,8 +535,6 @@ void 	lora_spi_remove(void);
 void 	lora_read_version_register(void);
 #endif
 
-void 	RadioSetMaxPayloadLength(uint8_t packetType, uint8_t maxPayloadLength);
-uint8_t GetPayload(uint8_t *buffer, uint8_t *size, uint8_t maxSize);
 
 
 #endif /* MAIN_LORA_LLC68_H_ */
