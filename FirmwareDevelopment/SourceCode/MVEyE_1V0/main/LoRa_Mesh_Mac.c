@@ -4,7 +4,7 @@
 ///
 ///     \brief LoRa_Mesh_Mac framework driver
 ///
-///     \author       Chandrashekhar Venkatesh
+///     \author       Venkata Suresh
 ///
 ///     Location:     India
 ///
@@ -33,7 +33,6 @@
 //  | | \| \__, |___ \__/ |__/ |___ .__/
 //
 //==============================================================================
-
 #include "lora_app.h"
 #include "lora_llc68.h"
 #include "stdlib.h"            
@@ -42,11 +41,10 @@
 #include "freertos/task.h"           
 #include "freertos/semphr.h"    
 #include "esp_timer.h"             
-#include "Route.h"         
+#include "LoRa_Mesh_Route.h"         
 #include "esp_log.h"
 #include "LoRa_Mesh_Net.h"
 #include "esp_task_wdt.h"
-
 //==============================================================================
 //   __   ___  ___         ___  __
 //  |  \ |__  |__  | |\ | |__  /__`
@@ -65,51 +63,6 @@
 		q.Header.NetHeader.pid = p->Header.NetHeader.pid; \
 	} while (0)
 	
-
-// Interrupt Service Routine (ISR) for handling DIO interrupt
-static void IRAM_ATTR dio1_isr_handler(void *arg) {
-    BaseType_t yield_req = pdFALSE;  
-   	gpio_intr_disable(LORA_DIO1);
-    // Give semaphore from ISR
-    xSemaphoreGiveFromISR(m_irq_Semaphore, &yield_req);
-    // If a higher priority task was woken, yield to it immediately
-    if (yield_req == pdTRUE) {
-        portYIELD_FROM_ISR();  // Perform context switch if required
-    }
-}
-
-void init_dio1_interrupt(void)
-{
-    gpio_config_t io_conf = {
-        .intr_type = GPIO_INTR_POSEDGE,   // Interrupt on Rising edge
-        .mode = GPIO_MODE_INPUT,          // Set pin as input
-        .pin_bit_mask = (1ULL << LORA_DIO1), // Pin mask for DIO1
-        .pull_down_en = 0,                // Disable pull-down
-        .pull_up_en = 1,                  // Enable pull-up
-    };
-    gpio_config(&io_conf);
-
-    gpio_install_isr_service(0);
-
-    gpio_isr_handler_add(LORA_DIO1, dio1_isr_handler, (void*)LORA_DIO1);
-
-    ESP_LOGI(TAG, "DIO1 interrupt initialized on GPIO %d", LORA_DIO1);
-}
-
-
-void enable_dio1_interrupt(void)
-{
-    gpio_intr_enable(LORA_DIO1); // Enable interrupt
-    ESP_LOGI(TAG, "DIO1 interrupt enabled on GPIO %d", LORA_DIO1);
-}
-
-// Disable interrupt for DIO1 pin
-void disable_dio1_interrupt(void)
-{
-    gpio_intr_disable(LORA_DIO1); // Disable interrupt
-    ESP_LOGI(TAG, "DIO1 interrupt disabled on GPIO %d", LORA_DIO1);
-}
-
 #define SET_RADIO(fun, irq) \
     do { \
         enable_dio1_interrupt();  \
@@ -117,7 +70,6 @@ void disable_dio1_interrupt(void)
         xSemaphoreTake(m_irq_Semaphore, portMAX_DELAY);  \
         irq = GetIrqStatus();  \
         ClearIrqStatus(LLCC68_IRQ_ALL);  \
-        disable_dio1_interrupt(); \
     } while (0)
 #define IS_IRQ(irq,x) \
 	(((irq) & (x) ) == x)
@@ -163,11 +115,84 @@ uint32_t mac_rx_drop;
 uint32_t mac_tx_done;           
 uint32_t mac_ack_respon;        
 static uint8_t tx_timer;        
-// Function to set the LLCC68 to sleep
-void LLCC68SetSleep(SleepParams_t sleepConfig) {
-    uint8_t command = sleepConfig.sleepStart | sleepConfig.rtcStatus;
-    WriteRegister(LLCC68_SLEEP_START_COLD, &command, 1);
+/*******************************************************************************
+ * Function: dio1_isr_handler
+ * Description: Interrupt Service Routine (ISR) for DIO1 pin. 
+ * Parameters: 
+ *   - arg: Pointer to optional argument (DIO1 pin).
+ * Returns: None
+ * Author         : C.VenkataSuresh
+ * Date           : 20SEP2024
+ ******************************************************************************/
+static void IRAM_ATTR dio1_isr_handler(void *arg) {
+    BaseType_t yield_req = pdFALSE;  
+   	gpio_intr_disable(LORA_DIO1);
+    // Give semaphore from ISR
+    xSemaphoreGiveFromISR(m_irq_Semaphore, &yield_req);
+    // If a higher priority task was woken, yield to it immediately
+    if (yield_req == pdTRUE) {
+        portYIELD_FROM_ISR();  // Perform context switch if required
+    }
 }
+/***********************************************************************************
+ * Function name  : init_dio1_interrupt
+ * Description    : Initializes the GPIO interrupt for DIO1. Configures the pin as input 
+ *                  with pull-up enabled, and sets the interrupt to trigger on the rising edge.
+ * Parameters     : None
+ * Returns        : None
+ * Known Issues   : None
+ * Note           :
+ * Author         : C.VenkataSuresh
+ * Date           : 20SEP2024
+ ***********************************************************************************/
+void init_dio1_interrupt(void)
+{
+    gpio_config_t io_conf = {
+        .intr_type = GPIO_INTR_POSEDGE,   // Interrupt on Rising edge
+        .mode = GPIO_MODE_INPUT,          // Set pin as input
+        .pin_bit_mask = (1ULL << LORA_DIO1), // Pin mask for DIO1
+        .pull_down_en = 0,                // Disable pull-down
+        .pull_up_en = 1,                  // Enable pull-up
+    };
+    gpio_config(&io_conf);
+
+    gpio_install_isr_service(0);
+
+    gpio_isr_handler_add(LORA_DIO1, dio1_isr_handler, (void*)LORA_DIO1);
+
+    ESP_LOGI(TAG, "DIO1 interrupt initialized on GPIO %d", LORA_DIO1);
+}
+/***********************************************************************************
+ * Function name  : enable_dio1_interrupt
+ * Description    : Enables the interrupt functionality for the DIO1 pin.
+ * Parameters     : None
+ * Returns        : None
+ * Known Issues   : None
+ * Note           : 
+ * Author         : C.VenkataSuresh
+ * Date           : 20SEP2024
+ ***********************************************************************************/
+void enable_dio1_interrupt(void)
+{
+    gpio_intr_enable(LORA_DIO1); // Enable interrupt
+    ESP_LOGI(TAG, "DIO1 interrupt enabled on GPIO %d", LORA_DIO1);
+}
+/***********************************************************************************
+ * Function name  : disable_dio1_interrupt
+ * Description    : Disables the interrupt functionality for the DIO1 pin.
+ * Parameters     : None
+ * Returns        : None
+ * Known Issues   : None
+ * Note           : 
+ * Author         : C.VenkataSuresh
+ * Date           : 20SEP2024
+ ***********************************************************************************/
+void disable_dio1_interrupt(void)
+{
+    gpio_intr_disable(LORA_DIO1); // Disable interrupt
+    ESP_LOGI(TAG, "DIO1 interrupt disabled on GPIO %d", LORA_DIO1);
+}
+
 /***********************************************************************************
  * Function name  : mac_peek_pkg
  *
@@ -178,7 +203,7 @@ void LLCC68SetSleep(SleepParams_t sleepConfig) {
  *
  * Known Issues   : None
  * Note           : 
- * Author         : C. VenkataSuresh
+ * Author         : C.VenkataSuresh
  * Date           : 20SEP2024
  ***********************************************************************************/
 bool mac_peek_pkg(LoRaPkg* p) {
@@ -308,10 +333,9 @@ static void mac_rx_handle(LoRaPkg* p)
  *
  * Known Issues   : None
  * Note           : 
- * Author         : Naveen GS
+ * Author         : C. VenkataSuresh
  * Date           : 20SEP2024
  ***********************************************************************************/
-
 void lora_mac_task(void *pvParameter)
 {
     uint8_t irqRegs;
@@ -320,25 +344,23 @@ void lora_mac_task(void *pvParameter)
     uint8_t pkgbuf[255];
     PkgType hdr_type;
     LoRaPkg rxtmp, txtmp;
-    
     SleepParams_t sleepConfig;
     sleepConfig.sleepStart = LLCC68_SLEEP_START_WARM;
     sleepConfig.rtcStatus = LLCC68_SLEEP_RTC_ON;
     mac_net_param_t *param = (mac_net_param_t *)pvParameter;
     lora_mac_hook *hook = &(param->mac_hooks);
-    //esp_task_wdt_add(NULL);
+    esp_task_wdt_add(lora_mac_handle);
     while (1) 
     {
        	 ESP_LOGI(TAG,"I am in LoRa Mack");
 	  	 SetStandby(LLCC68_STANDBY_RC);
      	 SET_RADIO(RadioStartCad(), irqRegs );
-	     ESP_LOGI(TAG,"irqRegs:%d",irqRegs);
-		
        if (IS_IRQ(irqRegs, LLCC68_IRQ_CAD_DONE)) 
         {
             phy_cad_done++;
             if (hook->macCadDone != NULL) hook->macCadDone();
-			ESP_LOGI(TAG,"macCadDone!");
+			//ESP_LOGI(TAG,"macCadDone!");
+			//ESP_LOGI(TAG,"irqRegs:%d",irqRegs);
             if (IS_IRQ(irqRegs, LLCC68_IRQ_CAD_DETECTED)) 
             {
                 phy_cad_det++;
@@ -413,28 +435,9 @@ void lora_mac_task(void *pvParameter)
                 }
             }
         }
-       	LLCC68SetSleep(sleepConfig);
+       	SetSleep(sleepConfig);
+       	esp_task_wdt_reset();
         vTaskDelay(pdMS_TO_TICKS(CAD_PERIOD_MS));
-    
 	}
 
-}
-/***********************************************************************************
- * Function name  : RadioStartCad
- *
- * Description    : This function initiates the Channel Activity Detection (CAD)
- *                  process for LoRa communication. 
- * Parameters     : None.
- * Returns        : None (void).
- * Known Issues   : None.
- * Note           : 
- * Author         : C.VenkataSuresh
- * Date           : 20SEP2024
- ***********************************************************************************/
-void RadioStartCad( void )
-{
-    SetDioIrqParams( LLCC68_IRQ_CAD_DONE | LLCC68_IRQ_CAD_DETECTED, 
-                           LLCC68_IRQ_CAD_DONE | LLCC68_IRQ_CAD_DETECTED,
-                           LLCC68_IRQ_NONE, LLCC68_IRQ_NONE );
-    SetCad();
 }

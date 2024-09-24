@@ -186,7 +186,7 @@ void app_main(void)
     //mqtt_init();
 	//create_mqtt_task();
 	init_dio1_interrupt();
-    Mesh();
+    LoRa_Mesh();
     // Use main Task to handle CLI
 	while(1)
 	{

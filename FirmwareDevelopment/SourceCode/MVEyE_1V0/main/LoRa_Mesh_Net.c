@@ -4,7 +4,7 @@
 ///
 ///     \brief LoRa Mesh Network framework driver
 ///
-///     \author        Venkata Suresh
+///     \author    Venkata Suresh
 ///
 ///     Location:     India
 ///
@@ -78,7 +78,6 @@
 		ra_pid++; \
 	} while (0)
 
-
 #define GEN_PING_ACK(q, p) \
 	do { \
 		q.Header.type = TYPE_PING; \
@@ -126,15 +125,13 @@ SemaphoreHandle_t m_ack_Semaphore;
 static void ra_handle(LoRaPkg* p, lora_net_hook *hook); 
 /***********************************************************************************
  * Function name  : send_wait_ack
- *
  * Description    : Handles sending a LoRa packet and waits for an ACK within the 
  *                  specified timeout. Retries sending if no ACK is received.
  * Parameters     : p     - Pointer to the LoRa package.
  *                  hook  - Pointer to the network hook for transmission handling.
  * Returns        : 0 on success (ACK received), -1 on failure (ACK not received).
- *
  * Known Issues   : None
- * Note           : Utilizes a retry mechanism and a semaphore for synchronization.
+ * Note           :
  * Author         : C.venkataSuresh
  * Date           : 20SEP2024
  ***********************************************************************************/
@@ -162,13 +159,11 @@ static int8_t send_wait_ack(LoRaPkg* p, lora_net_hook* hook)
 }
 /***********************************************************************************
  * Function name  : lora_net_tx_task
- *
  * Description    : LoRa network transmission task. 
  * Parameters     : pvParameter - Pointer to network parameters (mac_net_param_t).
  * Returns        : None (void).
- *
  * Known Issues   : None
- * Note           : Implements a retry mechanism for ACK-based transmissions. 
+ * Note           :  
  * Author         : C. VenkataSuresh
  * Date           : 20SEP2024
  ***********************************************************************************/
@@ -223,13 +218,11 @@ void lora_net_tx_task(void *pvParameter)
 
 /***********************************************************************************
  * Function name  : lora_net_rx_task
- *
  * Description    : LoRa network reception task. 
  * Parameters     : pvParameter - Pointer to network parameters (mac_net_param_t).
  * Returns        : None (void).
- *
  * Known Issues   : None
- * Note           : Manages packet handling for the current node or broadcast messages.
+ * Note           : 
  * Author         : Venkata Suresh
  * Date           : 20SEP2024
  ***********************************************************************************/

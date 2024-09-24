@@ -2,10 +2,10 @@
 ///
 ///     \file LoRa_Mesh_Net.h
 ///
-///     \brief lora application framework driver
+///     \brief lora net application framework driver header file
 ///
 ///
-///     \author       Naveen GS
+///     \author       Venkata Suresh
 ///
 ///     Location:     India
 ///
@@ -27,32 +27,26 @@
 /// Confidential Property of MicroVision Embedded Pvt Ltd
 ///
 //-----------------------------------------------------------------
-
+#ifndef MAIN_LORA_MESH_NET_H_
+#define MAIN_LORA_MESH_NET_H_
 //==============================================================================
 //          __             __   ___  __
 //  | |\ | /  ` |    |  | |  \ |__  /__`
 //  | | \| \__, |___ \__/ |__/ |___ .__/
 //
 //==============================================================================
-
-#ifndef MAIN_LORA_MESH_NET_H_
-#define MAIN_LORA_MESH_NET_H_
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "stdint.h"
-#include "Route.h"
-
-#define MAC_BROADCAST_ADDR 0xff
-#define NET_BROADCAST_ADDR MAC_BROADCAST_ADDR
-
+#include "LoRa_Mesh_Route.h"
 //==============================================================================
 //   __   ___  ___         ___  __
 //  |  \ |__  |__  | |\ | |__  /__`
 //  |__/ |___ |    | | \| |___ .__/
 //==============================================================================
-
+#define MAC_BROADCAST_ADDR 0xff
+#define NET_BROADCAST_ADDR MAC_BROADCAST_ADDR
 #pragma pack(push, 1)  // Start 1-byte packing
 
 #define SIZE_HDR		(sizeof(LoRaHeader))
@@ -63,7 +57,7 @@
 #define SIZE_DATA_ACK	((SIZE_HDR)+(0))
 #define CAD_DET_PEAK                    22
 #define CAD_DET_MIN                     10
-#define CAD_PERIOD_MS                   30
+#define CAD_PERIOD_MS                   3000
 #define RX_TIMEOUT                      80
 #define TX_TIMEOUT                      250
 #define TX_TIMER_MASK                   0x3 /* tx timer is between (0 ~ 3) * CAD_PERIOD_MS  */
@@ -188,12 +182,14 @@ typedef struct {
     uint8_t sleepStart;  // Sleep start mode: cold or warm
     uint8_t rtcStatus;   // RTC wake status: on or off
 } SleepParams_t;
+
 typedef enum
 {
     LORA_CAD_ONLY                           = 0x00,
     LORA_CAD_RX                             = 0x01,
     LORA_CAD_LBT                            = 0x10,
 }RadioCadExitModes_t;
+#pragma pack(pop) 
 //==============================================================================
 //   __        __   __                          __   __
 //  / _` |    /  \ |__)  /\  |       \  /  /\  |__) /__`
@@ -249,9 +245,7 @@ extern const int8_t pkgSizeMap[][2];
 void lora_net_tx_task (void * pvParameter);
 void lora_net_rx_task (void * pvParameter);
 void lora_mac_task(void * pvParameter);
-void LLCC68SetSleep(SleepParams_t sleepConfig);
 void init_dio1_interrupt(void);
-void RadioStartCad( void );
-#pragma pack(pop)  // Restore previous packing
+
 
 #endif /* MAIN_LORA_MESH_NET_H_ */
