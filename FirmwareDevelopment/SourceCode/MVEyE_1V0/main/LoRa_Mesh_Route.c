@@ -1,10 +1,10 @@
 //-----------------------------------------------------------------
 ///
-///     \file Route.c
+///     \file LoRa_Mesh_Route.c
 ///
-///     \brief Route framework driver
+///     \brief LoRa_Mesh_Route framework driver
 ///
-///     \author       Chandrashekhar Venkatesh
+///     \author        Venkata Suresh
 ///
 ///     Location:     India
 ///
@@ -26,7 +26,6 @@
 /// Confidential Property of MicroVision Embedded Pvt Ltd
 ///
 //-----------------------------------------------------------------
-
 //==============================================================================
 //          __             __   ___  __
 //  | |\ | /  ` |    |  | |  \ |__  /__`
@@ -35,16 +34,15 @@
 //==============================================================================
 #include "esp_log.h"
 #include <string.h> 
-#include "Route.h"
+#include "LoRa_Mesh_Route.h"
 #include "freertos/portmacro.h"
-
 //==============================================================================
 //   __   ___  ___         ___  __
 //  |  \ |__  |__  | |\ | |__  /__`
 //  |__/ |___ |    | | \| |___ .__/
 //
 //==============================================================================
-#define TAG "Route"
+#define TAG "LoRa_Mesh_Route"
 #define RSSI_WEAK2_THRESHOLD -110
 #define RSSI_DIFF2_THRESHOLD 10
 #define RSSI_WEAK1_THRESHOLD -90
@@ -57,7 +55,6 @@
 			sizeof(RouteTableEntry) * (ROUTING_TABLE_SIZE - index - 1)); \
 		_routes[ROUTING_TABLE_SIZE - 1].state = Invalid; \
 	} while (0)
- 
 //==============================================================================
 //   __        __   __                          __   __
 //  / _` |    /  \ |__)  /\  |       \  /  /\  |__) /__`
@@ -75,10 +72,8 @@ static Addr_t _addr;
 static RouteTableEntry _routes[ROUTING_TABLE_SIZE];  
 LinkQualityEntry _LinkQuality[255];  
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED; 
-
 /***********************************************************************************
  * Function name  : isNeedUpdate
- *
  * Description    : Determines if a route update is needed based on the link quality 
  *                  of old and new hops. 
  * Parameters     : old_hop - The identifier of the old hop.
@@ -86,7 +81,6 @@ portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
  *                  old_hop_count - The hop count associated with the old hop.
  *                  new_hop_count - The hop count associated with the new hop.
  * Returns        : true if an update is needed, false otherwise.
- *
  * Known Issues   : None
  * Note           : 
  * Author         : C.VenkataSuresh
@@ -123,7 +117,6 @@ static bool isNeedUpdate(uint8_t old_hop, uint8_t new_hop, uint8_t old_hop_count
 }
 /***********************************************************************************
  * Function name  : _getRouteTo
- *
  * Description    : Searches the routing table for a valid route to the specified 
  *                  destination.
  * Parameters     : dest - The destination address to find a route to.
@@ -131,7 +124,7 @@ static bool isNeedUpdate(uint8_t old_hop, uint8_t new_hop, uint8_t old_hop_count
  *                  if no valid route is found.
  * Known Issues   : None
  * Note           : 
- * Author         : C. VenkataSuresh
+ * Author         : C.VenkataSuresh
  * Date           : 20SEP2024
  ********************************************************************************/
 static int8_t _getRouteTo(uint8_t dest) {
@@ -145,7 +138,6 @@ static int8_t _getRouteTo(uint8_t dest) {
 }
 /***********************************************************************************
  * Function name  : _clearLinkQualityMap
- *
  * Description    : Resets the link quality map by marking all entries as invalid. 
  * Parameters     : None
  * Returns        : None
@@ -254,7 +246,6 @@ updated:
 out:
     portEXIT_CRITICAL(&mux);  
 }
-
 /***********************************************************************************
  * Function name  : _getNetAddr
  * Description    : Retrieves the current network address.
@@ -283,7 +274,6 @@ static uint8_t _getMacAddr(void) {
 }
 /***********************************************************************************
  * Function name  : _delRouteByNexthop
- *
  * Description    : Deletes routes from the routing table that have the specified 
  *                  next hop address. 
  * Parameters     : uint8_t next_hop : The next hop address for which routes should be deleted.
@@ -339,7 +329,7 @@ static void _delRouteByDest(uint8_t dest) {
  * Returns        : None
  * Known Issues   : None
  * Note           : 
- * Author         : C. VenkataSuresh
+ * Author         : C.VenkataSuresh
  * Date           : 20SEP2024
  ***********************************************************************************/
 
@@ -377,7 +367,6 @@ static void _clearLinkQualityMapTimer(TimerHandle_t xTimer) {
     //ESP_LOGI(TAG,"LinkQualityMap clean: %d", cnt);  
     portEXIT_CRITICAL(&mux);  
 }
-
 const MeshRoute_t Route = {
     .getRouteTo = _getRouteTo,
     .initRouteTable = _initRouteTable,
