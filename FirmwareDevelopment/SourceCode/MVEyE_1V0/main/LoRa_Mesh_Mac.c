@@ -348,13 +348,13 @@ void lora_mac_task(void *pvParameter)
     sleepConfig.sleepStart = LLCC68_SLEEP_START_WARM;
     sleepConfig.rtcStatus = LLCC68_SLEEP_RTC_ON;
     mac_net_param_t *param = (mac_net_param_t *)pvParameter;
-    lora_mac_hook *hook = &(param->mac_hooks);
-    esp_task_wdt_add(lora_mac_handle);
+    lora_mac_hook *hook = &(param->mac_hooks); 
     while (1) 
     {
        	 ESP_LOGI(TAG,"I am in LoRa Mack");
 	  	 SetStandby(LLCC68_STANDBY_RC);
      	 SET_RADIO(RadioStartCad(), irqRegs );
+     	 ESP_LOGI(TAG,"irqRegs:%d",irqRegs);
        if (IS_IRQ(irqRegs, LLCC68_IRQ_CAD_DONE)) 
         {
             phy_cad_done++;
@@ -436,7 +436,6 @@ void lora_mac_task(void *pvParameter)
             }
         }
        	SetSleep(sleepConfig);
-       	esp_task_wdt_reset();
         vTaskDelay(pdMS_TO_TICKS(CAD_PERIOD_MS));
 	}
 
