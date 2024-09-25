@@ -1854,7 +1854,7 @@ void SetSleep(SleepParams_t sleepConfig) {
  *                  process for LoRa communication. 
  * Parameters     : None.
  * Returns        : None (void).
- * Known Issues   : None.
+ * Known Issues   : None
  * Note           : 
  * Author         : C.VenkataSuresh
  * Date           : 20SEP2024

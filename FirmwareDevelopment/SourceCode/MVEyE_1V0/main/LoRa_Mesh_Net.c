@@ -176,9 +176,10 @@ void lora_net_tx_task(void *pvParameter)
     
 	//esp_task_wdt_add(NULL);
     while (1) {
-		ESP_LOGI(TAG,"I am in LoRa Net");
+		ESP_LOGI(TAG,"I am in LoRa Net_TX");
         if (xQueueReceive(net_tx_buf, &p, portMAX_DELAY) == pdPASS) 
         {
+			
             // Skip processing if the destination is local
             if (p.Header.NetHeader.dst == Route.getNetAddr())
                 continue;
@@ -236,7 +237,7 @@ void lora_net_rx_task (void * pvParameter)
 	//esp_task_wdt_add(NULL);
 	
 	while (1) {
-		ESP_LOGI(TAG,"I am in LoRa Net2");
+		ESP_LOGI(TAG,"I am in LoRa Net_RX");
 		if ( xQueueReceive(mac_rx_buf, &p, portMAX_DELAY) == pdPASS) // Receive packet from MAC layer queue
 		{
 			if (p.Header.NetHeader.dst == Route.getNetAddr()
