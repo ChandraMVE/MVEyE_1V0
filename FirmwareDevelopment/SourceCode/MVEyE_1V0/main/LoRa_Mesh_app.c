@@ -45,10 +45,6 @@
 #include "esp_timer.h"
 #include "lora_app.h"
 #include "esp_task_wdt.h"
-#include "nvs.h"
-#include "nvs_flash.h"
-#include <sys/_types.h>
-
 //==============================================================================
 //   __   ___  ___         ___  __
 //  |  \ |__  |__  | |\ | |__  /__`
@@ -57,7 +53,7 @@
 //==============================================================================
 
 #define TAG "LoRaMeshApp"
-#define VALID_IDENTIFIER 0xdeadbeef
+
 #define ACK_CONFIG ACK
 
 #define APP_TX(p, queue, timeout) \
@@ -67,9 +63,9 @@
 		xQueueSend(queue, &p, 0); \
 	} while (0)
 		
-#define DST						0x2
+#define DST						0x1
 
-#define PING_TIMEOUT 5000
+#define PING_TIMEOUT 3000
 
 #define STAT_PERIOD_MS			10000
 
@@ -99,41 +95,12 @@ int8_t ping_dst = -1;
 TaskHandle_t app_stat_handle;
 QueueHandle_t app_stat_buf;
 TaskHandle_t app_recv_handle;
-static TaskHandle_t app_upload_handle;
 //==============================================================================
 //   __  ___      ___    __                __   __
 //  /__`  |   /\   |  | /  `    \  /  /\  |__) /__`
 //  .__/  |  /~~\  |  | \__,     \/  /~~\ |  \ .__/
 //
 //==============================================================================
-/***********************************************************************************
- * Function name  : app_upload_task
- *
- * Description    : app app_upload_task.
- * Parameters     : None
- * Returns        : None
- * Known Issues   :
- * Note           :
- * author         : Venkata Suresh
- * date           : 20SEP2024
- ***********************************************************************************/
-static void app_upload_task (void * pvParameter)
-{
-	/*float volatile temp;
-	
-	LoRaPkg p = {
-		.Header.type = TYPE_DATA,
-		.Header.NetHeader.dst = DST,
-		.Header.NetHeader.subtype = SUB_DATA,
-		.Header.NetHeader.ack = ACK_CONFIG,
-	};
-*/
-	while (1)
-	{
-		//TO DO... related to Accelerometer task
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
-	}
-}
 /***********************************************************************************
  * Function name  : app_ping_task
  *
@@ -152,8 +119,7 @@ void app_ping_task(void * pvParameter)
     int16_t time;
     LoRaPkg p = {
         .Header.type = TYPE_PING,                  
-        .Header.NetHeader.ack = ACK_NO,
-                   
+        .Header.NetHeader.ack = ACK_NO,            
     };
     
     LoRaPkg u = {
@@ -309,12 +275,11 @@ void app_control (LoRaPkg *p)
  * author         : Venkata Suresh
  * date           : 20SEP2024
  ***********************************************************************************/
-/*void app_gw_task (void * pvParameter)
+void app_gw_task (void * pvParameter)
 {
 	Ping_t ping_req;
 	ping_req.upload_node = *(uint8_t *)pvParameter;
 	while (1) {
-		ESP_LOGI(TAG,"I am gatway ");
 		vTaskDelay(pdMS_TO_TICKS(5000));
 		ping_req.ping_dest = 0x2;
 		xQueueSend(app_ping_buf, &ping_req, 0);
@@ -324,38 +289,7 @@ void app_control (LoRaPkg *p)
 		xQueueSend(app_ping_buf, &ping_req, 0);	
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
-}*/
-void app_gw_task(void *pvParameter)
-{
-    if (pvParameter == NULL) {
-        ESP_LOGE(TAG, "Invalid parameter passed to app_gw_task");
-        vTaskDelete(NULL); // Exit the task if the parameter is invalid
-        return;
-    }
-
-    Ping_t ping_req;
-    ping_req.upload_node = *(uint8_t *)pvParameter; // Safe to dereference now
-
-    while (1) {
-        ESP_LOGI(TAG, "I am gateway ");
-        vTaskDelay(pdMS_TO_TICKS(5000));
-
-        ping_req.ping_dest = 0x2;
-        if (xQueueSend(app_ping_buf, &ping_req, 0) != pdTRUE) {
-            ESP_LOGE(TAG, "Failed to send ping to 0x2");
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(5000));
-
-        ping_req.ping_dest = 0x3;
-        if (xQueueSend(app_ping_buf, &ping_req, 0) != pdTRUE) {
-            ESP_LOGE(TAG, "Failed to send ping to 0x3");
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
 }
-
 
 /***********************************************************************************
  * Function name  : app_recv_task
@@ -465,6 +399,102 @@ void mac_cad_detect_hook(void) {
 }
 
 /***********************************************************************************
+ * Function name  : mesh_task
+ * Description    : mesh_task.
+ * Parameters     : None
+ * Returns        : None
+ * Known Issues   :
+ * Note           :
+ * author         : Venkata Suresh
+ * date           : 20SEP2024
+ ***********************************************************************************/
+/*void mesh_task( void *pvParameters )
+{ 
+	ESP_LOGI(TAG,"HI, i am in main");
+	vTaskDelay(pdMS_TO_TICKS(1000));
+    TimerHandle_t LinkQMap_timer; 
+    esp_log_level_set("*", ESP_LOG_INFO); 
+    ESP_LOGI(TAG, "Compile Time: %s %s", __DATE__, __TIME__); 
+    LoRaAppInit();
+    SetCadParams(LLCC68_CAD_ON_2_SYMB, CAD_DET_PEAK, CAD_DET_MIN, LORA_CAD_ONLY, 0);
+  
+    // Set up MAC layer parameters
+    static mac_net_param_t param = {
+        .mac_hooks.macCadDone = mac_cad_done_hook, 
+        .mac_hooks.macRxStart = mac_rx_start_hook, 
+        .mac_hooks.macTxStart = mac_tx_start_hook, 
+        .mac_hooks.macRxEnd = mac_rx_end_hook, 
+        .mac_hooks.macTxEnd = mac_tx_end_hook, 
+    };
+	ESP_LOGI(TAG, "param completed:");
+    // Create FreeRTOS queues for communication between tasks
+    net_tx_buf = xQueueCreate(NET_TX_BUF_NUM, sizeof(LoRaPkg)); 
+    net_rx_buf = xQueueCreate(NET_RX_BUF_NUM, sizeof(LoRaPkg)); 
+    mac_tx_buf = xQueueCreate(MAC_TX_BUF_NUM, sizeof(LoRaPkg)); 
+    mac_rx_buf = xQueueCreate(MAC_RX_BUF_NUM, sizeof(LoRaPkg)); 
+    app_ping_buf = xQueueCreate(8, sizeof(Ping_t)); 
+    app_stat_buf = xQueueCreate(8, sizeof(uint8_t)); 
+	ESP_LOGI(TAG, "Queue completed:");
+    // Create semaphores for synchronization
+    m_irq_Semaphore = xSemaphoreCreateBinary(); 
+    m_ack_Semaphore = xSemaphoreCreateBinary(); 
+
+    ESP_LOGI(TAG, "LoRaPkg max size: %d", SIZE_PKG_MAX); // Log the maximum size of LoRa package.
+
+   // Addr_t addr; // Declare an address variable (unused in the current code).
+    
+        if (net_tx_buf && net_rx_buf && mac_tx_buf && mac_rx_buf &&
+            app_ping_buf && app_stat_buf && m_irq_Semaphore && m_ack_Semaphore) {
+            xTaskCreate(&lora_mac_task, "lora_mac", configMINIMAL_STACK_SIZE + 1500, 
+                &param, 3, &lora_mac_handle);
+                 // Task for LoRa MAC layer.
+            xTaskCreate(lora_net_tx_task, "lora_net_tx", configMINIMAL_STACK_SIZE + 500, 
+                &param, 2, &lora_net_tx_handle); // Task for LoRa network transmission.
+            xTaskCreate(lora_net_rx_task, "lora_net_rx", configMINIMAL_STACK_SIZE + 500, 
+                &param, 2, &lora_net_rx_handle); // Task for LoRa network reception.*/
+
+            //xTaskCreate(app_recv_task, "app_recv", configMINIMAL_STACK_SIZE + 500, 
+                //NULL, 1, &app_recv_handle); // Task for receiving application data.
+
+            //xTaskCreate(app_stat_task, "app_stat", configMINIMAL_STACK_SIZE + 500, 
+             //   NULL, 1, &app_stat_handle); // Task for handling application statistics.
+
+           /* xTaskCreate(app_ping_task, "app_ping", configMINIMAL_STACK_SIZE + 500, 
+                NULL, 1, &app_ping_handle); // Task for handling application pings.*/
+
+            /*LinkQMap_timer = xTimerCreate("LQM_timer", pdMS_TO_TICKS(LINKQMAP_CLEAR_PERIOD), 
+                pdTRUE, 0, Route.clearLinkQuailtyMapTimer); // Timer to clear the link quality map at intervals defined by LINKQMAP_CLEAR_PERIOD.
+            xTimerStart(LinkQMap_timer, 0); // Start the timer.*/
+			
+         /*   ESP_LOGI(TAG," lora mesh starting..."); // Log the start of the LoRa mesh network.
+            //SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+           vTaskStartScheduler(); // Start the FreeRTOS scheduler, which will manage the tasks.
+           ESP_LOGI(TAG," Scheduler Done");
+        } else {
+            ESP_LOGI(TAG,"ERROR! xQueueCreate() or xSemaphoreCreateBinary() failed!"); // Log an error message if any queue or semaphore creation failed.
+        }
+  		 //esp_task_wdt_add(lora_mac_handle);
+    while(1){
+		//esp_task_wdt_reset();
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+	}
+}*/
+/***********************************************************************************
+ * Function name  : create_mesh_task
+ * Description    : create_mesh_task.
+ * Parameters     : None
+ * Returns        : None
+ * Known Issues   :
+ * Note           :
+ * author         : Keerthi Mallesh 
+ * date           : 20SEP2024
+ ***********************************************************************************/
+void create_mesh_task( void )
+{
+	 	xTaskCreate(&mesh_task, "LoRa_Mesh", 1024*4, NULL, 5, NULL);
+	 	
+}
+/***********************************************************************************
  * Function name  : LoRa_Mesh
  * Description    : create_mesh_task.
  * Parameters     : None
@@ -479,12 +509,11 @@ void LoRa_Mesh(){
 	ESP_LOGI(TAG,"HI, i am in main");
 	vTaskDelay(pdMS_TO_TICKS(1000));
     TimerHandle_t LinkQMap_timer; 
-   
     esp_log_level_set("*", ESP_LOG_INFO); 
     ESP_LOGI(TAG, "Compile Time: %s %s", __DATE__, __TIME__); 
     LoRaAppInit();
-    SetCadParams(LLCC68_CAD_ON_4_SYMB, CAD_DET_PEAK, CAD_DET_MIN, LLCC68_CAD_GOTO_RX, 0);
-   
+    SetCadParams(LLCC68_CAD_ON_2_SYMB, CAD_DET_PEAK, CAD_DET_MIN, LORA_CAD_ONLY, 0);
+  
     // Set up MAC layer parameters
     static mac_net_param_t param = {
         .mac_hooks.macCadDone = mac_cad_done_hook,
@@ -508,63 +537,9 @@ void LoRa_Mesh(){
     m_ack_Semaphore = xSemaphoreCreateBinary(); 
 
     ESP_LOGI(TAG, "LoRaPkg max size: %d", SIZE_PKG_MAX); // Log the maximum size of LoRa package.
-    Addr_t addr;
+
+   // Addr_t addr; // Declare an address variable (unused in the current code).
     
-	esp_err_t ret = nvs_flash_init();
-	if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-    	ESP_ERROR_CHECK(nvs_flash_erase());
-    	ret = nvs_flash_init();
-	}
-	ESP_ERROR_CHECK(ret); 
-	nvs_handle_t handle;
-	ret = nvs_open("storage", NVS_READWRITE, &handle);
-	if (ret != ESP_OK) {
-    	ESP_LOGE(TAG, "ERROR! Failed to open NVS handle: %s", esp_err_to_name(ret));
-    	return; 
-	}
-
-	uint32_t customer0 = 0;
-	uint32_t customer1 = 0;
-
-	// Read CUSTOMER0
-	ret = nvs_get_u32(handle, "CUSTOMER0", &customer0);
-	if (ret == ESP_ERR_NVS_NOT_FOUND) {
-    	ESP_LOGW(TAG, "CUSTOMER0 not found, setting to VALID_IDENTIFIER");
-    	customer0 = VALID_IDENTIFIER;
-    	ret = nvs_set_u32(handle, "CUSTOMER0", customer0);
-    	ESP_ERROR_CHECK(ret); 
-    	nvs_commit(handle); // Commit the changes
-	} else if (ret != ESP_OK) {
-    	ESP_LOGE(TAG, "ERROR! Could not read CUSTOMER0 from NVS: %s", esp_err_to_name(ret));
-    	nvs_close(handle);
-    	return;
-	}
-
-	ret = nvs_get_u32(handle, "CUSTOMER1", &customer1);
-	if (ret == ESP_ERR_NVS_NOT_FOUND || customer1 != 0x01) {
-    	ESP_LOGW(TAG, "CUSTOMER1 not found or not set to 0x01, setting it to 0x01");
-    	customer1 = DST; // Set CUSTOMER1 to 0x01
-    	ret = nvs_set_u32(handle, "CUSTOMER1", customer1);
-    	ESP_ERROR_CHECK(ret);
-    	nvs_commit(handle); // Commit the changes
-	} else if (ret != ESP_OK) {
-    	ESP_LOGE(TAG, "ERROR! Could not read CUSTOMER1 from NVS: %s", esp_err_to_name(ret));
-    	nvs_close(handle);
-    	return;
-	}
-
-	// Check if CUSTOMER0 is valid
-	if (customer0 == VALID_IDENTIFIER) {
-    	addr.mac = addr.net = customer1; // Set the address from CUSTOMER1
-    	Route.initRouteTable(&addr);
-    	ESP_LOGI(TAG, "Using NVS as addr: 0x%08x", (unsigned int)customer1);
-	} else {
-    	ESP_LOGE(TAG, "ERROR! Invalid NVS CUSTOMER0 value: 0x%08x", (unsigned int)customer0);
-	}
-
-	nvs_close(handle); // Close the NVS handle
-
-   
         if (net_tx_buf && net_rx_buf && mac_tx_buf && mac_rx_buf &&
             app_ping_buf && app_stat_buf && m_irq_Semaphore && m_ack_Semaphore) {
            xTaskCreate(lora_mac_task, "lora_mac", configMINIMAL_STACK_SIZE + 3000, &param, 3, &lora_mac_handle);
@@ -573,20 +548,7 @@ void LoRa_Mesh(){
                 &param, 2, &lora_net_tx_handle); // Task for LoRa network transmission.
             xTaskCreate(lora_net_rx_task, "lora_net_rx", configMINIMAL_STACK_SIZE + 1500, 
                 &param, 2, &lora_net_rx_handle); // Task for LoRa network reception.
-    		if (customer1 == 0x1) 
-    		{
-        		// Code for pinging to ID 0x2 and 0x3 periodically
-        		uint8_t upload_node_id = 1; 
-				if (xTaskCreate(app_gw_task, "app_gw", configMINIMAL_STACK_SIZE + 3000, (void *)&upload_node_id, 1, &app_gw_handle) != pdPASS) {
-    				ESP_LOGE(TAG, "Failed to create app_gw_task");
-				} else {
-    				ESP_LOGI(TAG, "app_gw_task created successfully");
-				}
-    		} else {
-        		// Create the upload task if CUSTOMER1 is not 1
-        		xTaskCreate(app_upload_task, "app_upload", configMINIMAL_STACK_SIZE + 1000, NULL, 1, &app_upload_handle);
-        		ESP_LOGI(TAG, "app_upload_task created successfully");
-    		}
+
             xTaskCreate(app_recv_task, "app_recv", configMINIMAL_STACK_SIZE + 1500, 
                 NULL, 1, &app_recv_handle); // Task for receiving application data.
 
@@ -600,12 +562,11 @@ void LoRa_Mesh(){
                 pdTRUE, 0, Route.clearLinkQuailtyMapTimer); // Timer to clear the link quality map at intervals defined by LINKQMAP_CLEAR_PERIOD.
             xTimerStart(LinkQMap_timer, 0); // Start the timer.
 			
-            ESP_LOGI(TAG," lora mesh starting...");
+            ESP_LOGI(TAG," lora mesh starting..."); // Log the start of the LoRa mesh network.
             //SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
           // vTaskStartScheduler(); // Start the FreeRTOS scheduler, which will manage the tasks.
            ESP_LOGI(TAG," Scheduler Done");
         } else {
-            ESP_LOGI(TAG,"ERROR! xQueueCreate() or xSemaphoreCreateBinary() failed!"); 
+            ESP_LOGI(TAG,"ERROR! xQueueCreate() or xSemaphoreCreateBinary() failed!"); // Log an error message if any queue or semaphore creation failed.
         }
 }
-
