@@ -1171,7 +1171,6 @@ void SetRx(uint32_t timeout)
 	buf[1] = (uint8_t)((timeout >> 8) & 0xFF);
 	buf[2] = (uint8_t)(timeout & 0xFF);
 	WriteCommand(LLCC68_CMD_SET_RX, buf, 3); // 0x82
-
 	for(int retry=0;retry<10;retry++) {
 		if ((GetStatus() & 0x70) == 0x50) break;
 		sys_delay_ms(1);
@@ -1791,18 +1790,17 @@ void get_llcc68_deveui() {
  * date           : 20SEP2024
  ******************************************************************************/
  
-void RadioSetMaxPayloadLength(uint8_t packetType, uint8_t maxPayloadLength)
+void RadioSetMaxPayloadLength(uint8_t packetType, uint8_t maxPayloadLength)  //12 preable length
 {
     if (packetType == LLCC68_PACKET_TYPE_LORA) {
         // Set the maximum payload length for LoRa packets
-        LoRaConfig(11, LLCC68_LORA_BW_500_0, LLCC68_LORA_CR_4_5, 8, maxPayloadLength, true, false);
+        LoRaConfig(11, LLCC68_LORA_BW_500_0, LLCC68_LORA_CR_4_5, 12, maxPayloadLength, true, false);
     } else if (packetType == LLCC68_PACKET_TYPE_GFSK) {
         // Set the maximum payload length for FSK packets (if needed)
-        LoRaConfig(11, LLCC68_LORA_BW_500_0, LLCC68_LORA_CR_4_5, 8, maxPayloadLength, true, false);
+        LoRaConfig(11, LLCC68_LORA_BW_500_0, LLCC68_LORA_CR_4_5, 12, maxPayloadLength, true, false);
     } 
-    // Add more cases here if there are other packet types to handle
+    ESP_LOGI(TAG,"Setting Max payload length!");
 }
-
 /*******************************************************************************
  * Function name  : GetPayload
  *
@@ -1861,8 +1859,65 @@ void SetSleep(SleepParams_t sleepConfig) {
  ***********************************************************************************/
 void RadioStartCad( void )
 {
-    SetDioIrqParams( LLCC68_IRQ_CAD_DONE | LLCC68_IRQ_CAD_DETECTED, 
-                           LLCC68_IRQ_CAD_DONE | LLCC68_IRQ_CAD_DETECTED,
+    SetDioIrqParams( LLCC68_IRQ_CAD_DONE|LLCC68_IRQ_CAD_DETECTED,
+                           LLCC68_IRQ_CAD_DONE|LLCC68_IRQ_CAD_DETECTED,
                            LLCC68_IRQ_NONE, LLCC68_IRQ_NONE );
     SetCad();
 }
+/***********************************************************************************
+ * Function name  : RadioRx
+ * Description    : This function initiates the RxTimeout for LoRa communication. 
+ * Parameters     : uint32_t timeout
+ * Returns        : None (void).
+ * Known Issues   : None
+ * Note           : 
+ * Author         : C.VenkataSuresh
+ * Date           : 20SEP2024
+ ***********************************************************************************/
+void RadioRx( uint32_t timeout )
+{
+	bool RxContinuous = false;
+    SetDioIrqParams( LLCC68_IRQ_RX_DONE | LLCC68_IRQ_TIMEOUT,
+                           LLCC68_IRQ_RX_DONE | LLCC68_IRQ_TIMEOUT,
+                           LLCC68_IRQ_NONE,
+                           LLCC68_IRQ_NONE );
+
+    if( RxContinuous == true )
+    {
+        SetRx( 0xFFFFFF ); // Rx Continuous
+    }
+    else
+    {
+        SetRx( timeout << 6 );
+    }
+  
+}
+/*void RadioRx(uint32_t timeout_ms) 
+{
+    // Log the start of RX mode
+    ESP_LOGI(TAG, "RadioRx: Starting RX mode with timeout: %u ms", (unsigned int) timeout_ms);
+
+    // Wait for the radio to be ready before setting the mode
+   if (!IsRadioReady()) {
+        ESP_LOGE(TAG, "Radio not ready!");
+        return;
+    }
+
+    // Set the IRQ masks for the desired interrupts (RxDone, Timeout, CrcError, HeaderError)
+    uint16_t irqMask = LLCC68_IRQ_RX_DONE | LLCC68_IRQ_TIMEOUT | LLCC68_IRQ_CRC_ERR | LLCC68_IRQ_HEADER_ERR;
+
+    // Enable the interrupts
+    WriteCommand(LLCC68_CMD_SET_DIO_IRQ_PARAMS, (uint8_t*)&irqMask, sizeof(irqMask));
+
+    // Set the radio to RX mode with the specified timeout
+    uint8_t timeoutBytes[3];
+    timeoutBytes[0] = (timeout_ms >> 16) & 0xFF;
+    timeoutBytes[1] = (timeout_ms >> 8) & 0xFF;
+    timeoutBytes[2] = timeout_ms & 0xFF;
+
+    // Send the command to put the radio into RX mode with the timeout
+    WriteCommand(LLCC68_CMD_SET_RX, timeoutBytes, sizeof(timeoutBytes));
+
+    // The rest will be handled by the SET_RADIO macro, which waits for an interrupt and processes it
+}
+*/
