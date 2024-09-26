@@ -270,7 +270,7 @@ void LoRaAppInit(void)
 	uint8_t spreadingFactor = 11;
 	uint8_t bandwidth = LLCC68_LORA_BW_500_0;
 	uint8_t codingRate = LLCC68_LORA_CR_4_5;
-	uint16_t preambleLength = 8;
+	uint16_t preambleLength = 12;  //12 need
 	uint8_t payloadLen = 0;
 	bool crcOn = true;
 	bool invertIrq = false;
