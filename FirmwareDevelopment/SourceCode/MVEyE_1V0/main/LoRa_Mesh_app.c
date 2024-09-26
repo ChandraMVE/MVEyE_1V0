@@ -67,7 +67,7 @@
 		xQueueSend(queue, &p, 0); \
 	} while (0)
 		
-#define DST						0x2
+#define DST						0x1
 
 #define PING_TIMEOUT 5000
 
@@ -309,22 +309,6 @@ void app_control (LoRaPkg *p)
  * author         : Venkata Suresh
  * date           : 20SEP2024
  ***********************************************************************************/
-/*void app_gw_task (void * pvParameter)
-{
-	Ping_t ping_req;
-	ping_req.upload_node = *(uint8_t *)pvParameter;
-	while (1) {
-		ESP_LOGI(TAG,"I am gatway ");
-		vTaskDelay(pdMS_TO_TICKS(5000));
-		ping_req.ping_dest = 0x2;
-		xQueueSend(app_ping_buf, &ping_req, 0);
-		
-		vTaskDelay(pdMS_TO_TICKS(5000));
-		ping_req.ping_dest = 0x3;
-		xQueueSend(app_ping_buf, &ping_req, 0);	
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
-	}
-}*/
 void app_gw_task(void *pvParameter)
 {
     if (pvParameter == NULL) {
@@ -355,7 +339,6 @@ void app_gw_task(void *pvParameter)
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
-
 
 /***********************************************************************************
  * Function name  : app_recv_task
@@ -427,7 +410,6 @@ void app_stat_task ( void * pvParameter)
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
 }
-
 /***********************************************************************************
  * Function name  : device_secondary
  * Description    : secondary device.
@@ -441,18 +423,20 @@ void app_stat_task ( void * pvParameter)
  
  void mac_tx_start_hook (void) {
 	//nrf_gpio_pin_set(LED_YELLOW);
+	ESP_LOGI(TAG,"TxStart LED!");
 }
 
 void mac_rx_start_hook (void) {
-	//nrf_gpio_pin_set(LED_GREEN);
+	ESP_LOGI(TAG,"RXStart LED!");
 }
 
 void mac_tx_end_hook (void) {
 	//nrf_gpio_pin_clear(LED_YELLOW);
+	ESP_LOGI(TAG,"TXEND LED!");
 }
 
 void mac_rx_end_hook (void) {
-	//nrf_gpio_pin_clear(LED_GREEN);
+	ESP_LOGI(TAG,"RXEND LED!");
 }
 
 void mac_cad_done_hook (void) {
@@ -461,7 +445,7 @@ void mac_cad_done_hook (void) {
 }
 
 void mac_cad_detect_hook(void) {
-    ESP_LOGI(TAG, "CAD detected !");
+    ESP_LOGI(TAG, "CAD Detection LED !");
 }
 
 /***********************************************************************************
@@ -483,9 +467,8 @@ void LoRa_Mesh(){
     esp_log_level_set("*", ESP_LOG_INFO); 
     ESP_LOGI(TAG, "Compile Time: %s %s", __DATE__, __TIME__); 
     LoRaAppInit();
-    SetCadParams(LLCC68_CAD_ON_4_SYMB, CAD_DET_PEAK, CAD_DET_MIN, LLCC68_CAD_GOTO_RX, 0);
-   
-    // Set up MAC layer parameters
+    SetCadParams(LLCC68_CAD_ON_16_SYMB, CAD_DET_PEAK, CAD_DET_MIN, LORA_CAD_ONLY, 0);
+    // symbols need to use 16
     static mac_net_param_t param = {
         .mac_hooks.macCadDone = mac_cad_done_hook,
         .mac_hooks.macCadDetect = mac_cad_detect_hook,  
