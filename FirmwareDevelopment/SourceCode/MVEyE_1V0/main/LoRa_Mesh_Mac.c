@@ -270,7 +270,7 @@ static void mac_rx_handle(LoRaPkg* p)
 				&& mac_dst != MAC_BROADCAST_ADDR 
 				&& p->Header.NetHeader.dst != NET_BROADCAST_ADDR) {
 			mac_ack_respon++;
-			//ESP_LOGI(TAG,"L2: send ack! pid: %d", p->Header.NetHeader.pid);
+			ESP_LOGI(TAG,"L2: send ack! pid: %d", p->Header.NetHeader.pid);
 			GEN_ACK(t, p);
 			xQueueSend(mac_tx_buf, &t, 0);
 			if (p->Header.NetHeader.pid == _last_seen_pid[p->Header.MacHeader.src]) {
@@ -279,10 +279,10 @@ static void mac_rx_handle(LoRaPkg* p)
 				return;
 			} else {
 				_last_seen_pid[p->Header.MacHeader.src] = p->Header.NetHeader.pid;
-				//ESP_LOGI(TAG,"L2: update last pid from 0x%02x: %d", p->Header.MacHeader.src, p->Header.NetHeader.pid);
+				ESP_LOGI(TAG,"L2: update last pid from 0x%02x: %d", p->Header.MacHeader.src, p->Header.NetHeader.pid);
 			}
 		} else if (p->Header.type == TYPE_DATA_ACK) {
-			//ESP_LOGI(TAG,"L2: recv TYPE_DATA_ACK pid: %d, wait pid: %d", p->Header.NetHeader.pid, ack_wait_id);
+			ESP_LOGI(TAG,"L2: recv TYPE_DATA_ACK pid: %d, wait pid: %d", p->Header.NetHeader.pid, ack_wait_id);
 			if (p->Header.NetHeader.pid == ack_wait_id) {
 				ESP_LOGI(TAG,"L2: ack notify, Delay: %lu", (unsigned long)(RTOS_TIME - ack_time));
 				xTaskNotifyGive(lora_net_tx_handle);
@@ -338,7 +338,7 @@ static void mac_rx_handle(LoRaPkg* p)
  ***********************************************************************************/
 void lora_mac_task(void *pvParameter)
 {
-    uint8_t irqRegs;
+    uint16_t irqRegs;
     uint32_t timer;
     uint8_t pkgsize;
     uint8_t pkgbuf[255];
@@ -354,25 +354,23 @@ void lora_mac_task(void *pvParameter)
        	 ESP_LOGI(TAG,"I am in LoRa Mack");
 	  	 SetStandby(LLCC68_STANDBY_RC);
      	 SET_RADIO(RadioStartCad(), irqRegs );
-     	 ESP_LOGI(TAG,"irqRegs:%d",irqRegs);
        if (IS_IRQ(irqRegs, LLCC68_IRQ_CAD_DONE)) 
         {
             phy_cad_done++;
             if (hook->macCadDone != NULL) hook->macCadDone();
-			//ESP_LOGI(TAG,"macCadDone!");
-			//ESP_LOGI(TAG,"irqRegs:%d",irqRegs);
+			ESP_LOGI(TAG,"macCadDone!");
             if (IS_IRQ(irqRegs, LLCC68_IRQ_CAD_DETECTED)) 
             {
                 phy_cad_det++;
                 ESP_LOGI(TAG,"CAD_DETECTED!");
+                ESP_LOGI(TAG,"cad irqRegs:%d",irqRegs);
                 if (hook->macCadDetect != NULL) hook->macCadDetect();
                 RadioSetMaxPayloadLength( LLCC68_PACKET_TYPE_LORA, 0xff); // Set maximum payload length
                 timer = RTOS_TIME;
                 if (hook->macRxStart != NULL) hook->macRxStart();
-                SET_RADIO(SetRx(RX_TIMEOUT), irqRegs );
-                ESP_LOGI(TAG,"irqRegs2:%d",irqRegs);
-                if (hook->macRxEnd != NULL) hook->macRxEnd();
-
+                SET_RADIO(RadioRx(80), irqRegs );
+                ESP_LOGI(TAG,"Rx irqRegs2:%d",irqRegs);
+                if (hook->macRxEnd != NULL) hook->macRxEnd();	
                 if (IS_IRQ(irqRegs, LLCC68_IRQ_CRC_ERR) || IS_IRQ(irqRegs, LLCC68_IRQ_HEADER_ERR)) 
                 {
                     phy_rx_err++;
@@ -386,8 +384,7 @@ void lora_mac_task(void *pvParameter)
                     phy_rx_done++;
                    
                     GetPayload(pkgbuf, &pkgsize, sizeof(pkgbuf));
-					//ESP_LOGI(TAG, "L1: Rx done, size: %u, time: %lu", pkgsize, (unsigned long)(RTOS_TIME - timer));
-
+					ESP_LOGI(TAG, "L1: Rx done, size: %u, time: %lu", pkgsize, (unsigned long)(RTOS_TIME - timer));
                     hdr_type = (PkgType)(pkgbuf[0]);
                     if (hdr_type < TYPE_MAX && pkgsize == pkgSizeMap[hdr_type][1]) 
                     {
