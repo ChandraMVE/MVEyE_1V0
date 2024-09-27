@@ -1866,7 +1866,7 @@ void RadioStartCad( void )
 }
 /***********************************************************************************
  * Function name  : RadioRx
- * Description    : This function initiates the RxTimeout for LoRa communication. 
+ * Description    : This function initiates the RadioRx for LoRa communication. 
  * Parameters     : uint32_t timeout
  * Returns        : None (void).
  * Known Issues   : None
@@ -1892,6 +1892,8 @@ void RadioRx( uint32_t timeout )
     }
   
 }
+
+
 /*void RadioRx(uint32_t timeout_ms) 
 {
     // Log the start of RX mode
@@ -1921,3 +1923,22 @@ void RadioRx( uint32_t timeout )
     // The rest will be handled by the SET_RADIO macro, which waits for an interrupt and processes it
 }
 */
+/***********************************************************************************
+ * Function name  : RadioSend
+ * Description    : This function initiates the RadioSend for LoRa communication. 
+ * Parameters     : uint32_t timeout
+ * Returns        : None (void).
+ * Known Issues   : None
+ * Note           : 
+ * Author         : C.VenkataSuresh
+ * Date           : 20SEP2024
+ ***********************************************************************************/
+void RadioSend( uint32_t timeout )
+{
+    SetDioIrqParams( LLCC68_IRQ_TX_DONE | LLCC68_IRQ_TIMEOUT,
+                           LLCC68_IRQ_TX_DONE | LLCC68_IRQ_TIMEOUT,
+                           LLCC68_IRQ_NONE,
+                           LLCC68_IRQ_NONE );
+
+    SetTx( timeout);
+}

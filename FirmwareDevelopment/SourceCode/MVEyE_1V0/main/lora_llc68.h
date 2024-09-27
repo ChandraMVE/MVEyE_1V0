@@ -528,7 +528,7 @@ uint8_t GetPayload(uint8_t *buffer, uint8_t *size, uint8_t maxSize);
 void 	SetSleep(SleepParams_t sleepConfig);
 void 	RadioStartCad( void );
 void 	RadioRx( uint32_t timeout );
-
+void 	RadioSend( uint32_t timeout );
 #if 0
 void 	lora_spi_init(void);
 void 	lora_io_init(void);
