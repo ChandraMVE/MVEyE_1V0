@@ -172,28 +172,34 @@ void lora_net_tx_task(void *pvParameter)
     mac_net_param_t *param = (mac_net_param_t *)pvParameter; 
     lora_net_hook *hook = &(param->net_hooks); 
     LoRaPkg p, t; 
-    int8_t nexthop; 
+    int16_t nexthop; 
     
 	//esp_task_wdt_add(NULL);
     while (1) {
 		ESP_LOGI(TAG,"I am in LoRa Net_TX");
         if (xQueueReceive(net_tx_buf, &p, portMAX_DELAY) == pdPASS) 
         {
-			
+			ESP_LOGI(TAG, "Destination:%d",p.Header.NetHeader.dst);
+			ESP_LOGI(TAG, "%d",Route.getNetAddr());
             // Skip processing if the destination is local
             if (p.Header.NetHeader.dst == Route.getNetAddr())
+            {
+            	ESP_LOGI(TAG, "%d",p.Header.NetHeader.dst);
                 continue;
+            }
             if (p.Header.NetHeader.dst == NET_BROADCAST_ADDR) {
                 p.Header.MacHeader.dst = MAC_BROADCAST_ADDR;
                 NET_TX(&p, mac_tx_buf, portMAX_DELAY, hook);
                 ESP_LOGI(TAG, "L3: Tx broadcast pkg!");
             } else {
                 nexthop = Route.getRouteTo(p.Header.NetHeader.dst);
+                ESP_LOGI(TAG,"next hop:%d",nexthop);
                 if (nexthop < 0) {
                     net_tx_drop++; 
                     GEN_Route_Adv(t, p.Header.NetHeader.dst);
                     ESP_LOGI(TAG, "L3: No route to: 0x%02x, send Routte_Adv, pid: %d", p.Header.NetHeader.dst, t.Header.NetHeader.pid); // Debug log for RA
                     NET_TX(&t, mac_tx_buf, portMAX_DELAY, hook);
+                    ESP_LOGI(TAG, "nexthop NET Tx done!");
                 } else {
                     net_fwd_done++;
                     p.Header.MacHeader.dst = nexthop;
@@ -212,7 +218,7 @@ void lora_net_tx_task(void *pvParameter)
                 }
             }
         }
-       // esp_task_wdt_reset(); // Reset the WDT for this task
+        ESP_LOGI(TAG, "NET Tx done!");
         vTaskDelay(pdMS_TO_TICKS(CAD_PERIOD_MS));
     }
 }
