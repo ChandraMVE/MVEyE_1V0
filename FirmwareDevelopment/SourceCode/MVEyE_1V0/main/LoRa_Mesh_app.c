@@ -67,8 +67,8 @@
 		xQueueSend(queue, &p, 0); \
 	} while (0)
 		
-#define DST						0x1
-
+#define DST						0x3
+#define Self				    0x3
 #define PING_TIMEOUT 5000
 
 #define STAT_PERIOD_MS			10000
@@ -84,7 +84,7 @@
 //  \__> |___ \__/ |__) /~~\ |___     \/  /~~\ |  \ .__/
 //
 //==============================================================================
-
+Addr_t addr;
 typedef struct {
 	
 	uint8_t upload_node;
@@ -119,19 +119,23 @@ static TaskHandle_t app_upload_handle;
  ***********************************************************************************/
 static void app_upload_task (void * pvParameter)
 {
-	/*float volatile temp;
+	//float volatile temp;
 	
 	LoRaPkg p = {
 		.Header.type = TYPE_DATA,
+		.Header.NetHeader.src = Self,
 		.Header.NetHeader.dst = DST,
 		.Header.NetHeader.subtype = SUB_DATA,
 		.Header.NetHeader.ack = ACK_CONFIG,
 	};
-*/
+
 	while (1)
-	{
-		//TO DO... related to Accelerometer task
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
+	{    ESP_LOGI(TAG,"I am in upload Task ");
+		 p.AppData.temp = 43.4;
+		 p.AppData.volt = 35 ;
+		 APP_TX(p, net_tx_buf, 0);
+		 ESP_LOGI(TAG," Upload complete");
+		 vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
 }
 /***********************************************************************************
@@ -153,6 +157,7 @@ void app_ping_task(void * pvParameter)
     LoRaPkg p = {
         .Header.type = TYPE_PING,                  
         .Header.NetHeader.ack = ACK_NO,
+        .Header.NetHeader.dst = DST,
                    
     };
     
@@ -160,14 +165,16 @@ void app_ping_task(void * pvParameter)
         .Header.type = TYPE_DATA,                  
         .Header.NetHeader.ack = ACK_CONFIG,        
         .Header.NetHeader.subtype = SUB_CONTROL,   
-        .AppData.custom[0] = CMD_UPLOAD_PING,      
+        .AppData.custom[0] = CMD_UPLOAD_PING, 
+        .Header.NetHeader.dst = DST,     
     };
 
     while (1) {
 		ESP_LOGI(TAG,"I am in Ping Task ");
         if (xQueueReceive(app_ping_buf, &ping_req, portMAX_DELAY) == pdTRUE)
         {
-            p.Header.NetHeader.dst = ping_dst = ping_req.ping_dest;
+			ping_dst = ping_req.ping_dest;
+            p.Header.NetHeader.dst = ping_dst;
             time = (xTaskGetTickCount() * 1000) >> 10;  // Convert tick count to milliseconds
             APP_TX(p, net_tx_buf, 0);
             ret = ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(PING_TIMEOUT));
@@ -209,6 +216,7 @@ void print_data (LoRaPkg *p)
 	ESP_LOGI(TAG,"===>");
 	ESP_LOGI(TAG,"NET: 0x%02x, MAC: 0x%02x(%d), Rssi: %d, Snr: %d", p->Header.NetHeader.src, 
 		p->Header.MacHeader.src, p->Header.NetHeader.hop, p->stat.RssiPkt, p->stat.SnrPkt);
+	ESP_LOGI(TAG,"__upd__[%d][%f]%d]\n",p->Header.NetHeader.src,(p->AppData.temp),p->AppData.volt);
 	ESP_LOGI(TAG,"<===");
 	
 }
@@ -328,9 +336,7 @@ void app_gw_task(void *pvParameter)
         if (xQueueSend(app_ping_buf, &ping_req, 0) != pdTRUE) {
             ESP_LOGE(TAG, "Failed to send ping to 0x2");
         }
-
         vTaskDelay(pdMS_TO_TICKS(5000));
-
         ping_req.ping_dest = 0x3;
         if (xQueueSend(app_ping_buf, &ping_req, 0) != pdTRUE) {
             ESP_LOGE(TAG, "Failed to send ping to 0x3");
@@ -491,9 +497,10 @@ void LoRa_Mesh(){
     m_ack_Semaphore = xSemaphoreCreateBinary(); 
 
     ESP_LOGI(TAG, "LoRaPkg max size: %d", SIZE_PKG_MAX); // Log the maximum size of LoRa package.
-    Addr_t addr;
     
-	esp_err_t ret = nvs_flash_init();
+    uint32_t customer1 = 0;
+    
+	/*esp_err_t ret = nvs_flash_init();
 	if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
     	ESP_ERROR_CHECK(nvs_flash_erase());
     	ret = nvs_flash_init();
@@ -545,8 +552,13 @@ void LoRa_Mesh(){
     	ESP_LOGE(TAG, "ERROR! Invalid NVS CUSTOMER0 value: 0x%08x", (unsigned int)customer0);
 	}
 
-	nvs_close(handle); // Close the NVS handle
-
+	nvs_close(handle); // Close the NVS handle*/
+   addr.mac =Self;
+   addr.net =Self;
+   customer1 = Self;
+   Route.initRouteTable(&addr);
+   ESP_LOGI(TAG, "net.current:%d",addr.net);
+   ESP_LOGI(TAG, "mac.current:%d",addr.mac);
    
         if (net_tx_buf && net_rx_buf && mac_tx_buf && mac_rx_buf &&
             app_ping_buf && app_stat_buf && m_irq_Semaphore && m_ack_Semaphore) {
@@ -558,18 +570,20 @@ void LoRa_Mesh(){
                 &param, 2, &lora_net_rx_handle); // Task for LoRa network reception.
     		if (customer1 == 0x1) 
     		{
-        		// Code for pinging to ID 0x2 and 0x3 periodically
-        		uint8_t upload_node_id = 1; 
+        		/*// Code for pinging to ID 0x2 and 0x3 periodically
+        		uint8_t upload_node_id = 0x1; 
 				if (xTaskCreate(app_gw_task, "app_gw", configMINIMAL_STACK_SIZE + 3000, (void *)&upload_node_id, 1, &app_gw_handle) != pdPASS) {
     				ESP_LOGE(TAG, "Failed to create app_gw_task");
 				} else {
     				ESP_LOGI(TAG, "app_gw_task created successfully");
-				}
+				}*/
+				xTaskCreate(app_upload_task, "app_upload", configMINIMAL_STACK_SIZE + 1000, NULL, 1, &app_upload_handle);
+				ESP_LOGI(TAG, "app_upload_task created successfully");
     		} else {
         		// Create the upload task if CUSTOMER1 is not 1
-        		xTaskCreate(app_upload_task, "app_upload", configMINIMAL_STACK_SIZE + 1000, NULL, 1, &app_upload_handle);
-        		ESP_LOGI(TAG, "app_upload_task created successfully");
-    		}
+        		/*xTaskCreate(app_upload_task, "app_upload", configMINIMAL_STACK_SIZE + 1000, NULL, 1, &app_upload_handle);
+        		ESP_LOGI(TAG, "app_upload_task created successfully");*/
+        	}
             xTaskCreate(app_recv_task, "app_recv", configMINIMAL_STACK_SIZE + 1500, 
                 NULL, 1, &app_recv_handle); // Task for receiving application data.
 
