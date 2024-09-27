@@ -68,7 +68,7 @@
 //  .__/  |  /~~\  |  | \__,     \/  /~~\ |  \ .__/
 //
 //==============================================================================
-static Addr_t _addr;  
+Addr_t _addr;  
 static RouteTableEntry _routes[ROUTING_TABLE_SIZE];  
 LinkQualityEntry _LinkQuality[255];  
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED; 

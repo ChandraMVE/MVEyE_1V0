@@ -124,6 +124,6 @@ typedef struct {
 //==============================================================================
 extern const MeshRoute_t Route;
 extern int16_t _last_seen_pid[];
-
+extern Addr_t _addr;
 
 #endif
