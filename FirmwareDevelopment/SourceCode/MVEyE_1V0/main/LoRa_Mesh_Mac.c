@@ -65,7 +65,7 @@
 	
 #define SET_RADIO(fun, irq) \
     do { \
-        enable_dio1_interrupt();  \
+        enable_dio1_interrupt(); \
         fun; \
         xSemaphoreTake(m_irq_Semaphore, portMAX_DELAY);  \
         irq = GetIrqStatus();  \
@@ -342,6 +342,7 @@ void lora_mac_task(void *pvParameter)
     uint32_t timer;
     uint8_t pkgsize;
     uint8_t pkgbuf[255];
+     uint8_t buffer[255];
     PkgType hdr_type;
     LoRaPkg rxtmp, txtmp;
     SleepParams_t sleepConfig;
@@ -355,7 +356,7 @@ void lora_mac_task(void *pvParameter)
 	  	 SetStandby(LLCC68_STANDBY_RC);
      	 SET_RADIO(RadioStartCad(), irqRegs );
        if (IS_IRQ(irqRegs, LLCC68_IRQ_CAD_DONE)) 
-        {
+       {
             phy_cad_done++;
             if (hook->macCadDone != NULL) hook->macCadDone();
 			ESP_LOGI(TAG,"macCadDone!");
@@ -368,8 +369,9 @@ void lora_mac_task(void *pvParameter)
                 RadioSetMaxPayloadLength( LLCC68_PACKET_TYPE_LORA, 0xff); // Set maximum payload length
                 timer = RTOS_TIME;
                 if (hook->macRxStart != NULL) hook->macRxStart();
-                SET_RADIO(RadioRx(80), irqRegs );
-                ESP_LOGI(TAG,"Rx irqRegs2:%d",irqRegs);
+                //SET_RADIO(LoRaReceive(buffer, sizeof(buffer)), irqRegs );
+                SET_RADIO(RadioRx(80), irqRegs);
+                ESP_LOGI(TAG,"Receive irqRegs:%d",irqRegs);
                 if (hook->macRxEnd != NULL) hook->macRxEnd();	
                 if (IS_IRQ(irqRegs, LLCC68_IRQ_CRC_ERR) || IS_IRQ(irqRegs, LLCC68_IRQ_HEADER_ERR)) 
                 {
@@ -382,7 +384,6 @@ void lora_mac_task(void *pvParameter)
                 } else if (IS_IRQ(irqRegs, LLCC68_IRQ_RX_DONE)) 
                 {
                     phy_rx_done++;
-                   
                     GetPayload(pkgbuf, &pkgsize, sizeof(pkgbuf));
 					ESP_LOGI(TAG, "L1: Rx done, size: %u, time: %lu", pkgsize, (unsigned long)(RTOS_TIME - timer));
                     hdr_type = (PkgType)(pkgbuf[0]);
@@ -413,7 +414,8 @@ void lora_mac_task(void *pvParameter)
                         timer = RTOS_TIME;
                         if (hook->macTxStart != NULL) hook->macTxStart();
                         SET_RADIO(LoRaSend((uint8_t *)&txtmp, pkgsize, TX_TIMEOUT), irqRegs );
-                        ESP_LOGI(TAG,"irqRegs3:%d",irqRegs);
+                        SET_RADIO(RadioSend(TX_TIMEOUT), irqRegs );
+                        ESP_LOGI(TAG,"transmission irqRegs:%d",irqRegs);
 						if (hook->macTxEnd != NULL) hook->macTxEnd();
 						if (txtmp.Header.type == TYPE_DATA && txtmp.Header.NetHeader.ack == ACK)
                                 xSemaphoreGive(m_ack_Semaphore);
