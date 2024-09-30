@@ -42,7 +42,6 @@
 #include "arch/sys_arch.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-
 #include <driver/spi_master.h>
 #include <driver/gpio.h>
 #include "esp_log.h"
@@ -404,7 +403,7 @@ void LoRaConfig(uint8_t spreadingFactor, uint8_t bandwidth, uint8_t codingRate, 
 
 	// Do not use DIO interruptst
 	SetDioIrqParams(LLCC68_IRQ_ALL,   //all interrupts enabled
-					LLCC68_IRQ_NONE,  //interrupts on DIO1
+					LLCC68_IRQ_ALL,  //interrupts on DIO1
 					LLCC68_IRQ_NONE,  //interrupts on DIO2
 					LLCC68_IRQ_NONE); //interrupts on DIO3
 
@@ -450,6 +449,7 @@ void LoRaDebugPrint(bool enable)
 	if( irqRegs & LLCC68_IRQ_RX_DONE )
 	{
 		//ClearIrqStatus(LLCC68_IRQ_RX_DONE);
+		ESP_LOGI(TAG, "Rx interrupt: 0x%x",irqRegs);
 		ClearIrqStatus(LLCC68_IRQ_ALL);
 		rxLen = ReadBuffer(pData, len);
 	}
@@ -490,6 +490,7 @@ bool LoRaSend(uint8_t *pData, int16_t len, uint8_t mode)
 		if ( mode & LLCC68_TXMODE_SYNC )
 		{
 			irqStatus = GetIrqStatus();
+			ESP_LOGI(TAG, "irqStatus=0x%x", irqStatus);
 			while ( (!(irqStatus & LLCC68_IRQ_TX_DONE)) && (!(irqStatus & LLCC68_IRQ_TIMEOUT)) )
 			{
 				sys_delay_ms(1);

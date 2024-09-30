@@ -168,7 +168,7 @@ void app_main(void)
     //init_spi();
     
     //llcc68_reset();
-    
+    init_dio1_interrupt();
     //get_llcc68_version();
     //get_llcc68_deveui();
         
@@ -178,15 +178,15 @@ void app_main(void)
     //create_Accelerometer_task();
     
     // Initialize and configure Lora and tasks to handle ping pong data    
-    //LoRaAppInit();
-    //create_lora_task();
+    LoRaAppInit();
+    create_lora_task();
     //esp_task_wdt_init(&wdt_config);  // Set 5s timeout for WDT
    // esp_task_wdt_add(NULL);      // Add the main task
     // Initialize MQTT, WIFI settings and events to handle publish and subscribe topics
     //mqtt_init();
 	//create_mqtt_task();
-	init_dio1_interrupt();
-    LoRa_Mesh();
+	//init_dio1_interrupt();
+    //LoRa_Mesh();
     // Use main Task to handle CLI
 	while(1)
 	{

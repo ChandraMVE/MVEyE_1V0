@@ -52,7 +52,7 @@
 #define PING 1
 #define PONG 0
 #define DEVICE_ID 001
-#define DESTINATION_DEVICE_ID 003
+#define DESTINATION_DEVICE_ID 002
 #define MAX_HOPS 5
 //==============================================================================
 //   __        __   __                          __   __
@@ -172,7 +172,7 @@ void forward_message(MeshPacket* packet);
             } else {
                 // Forward the message if it's not for this device
                 ESP_LOGI(TAG, "Message received for another device, forwarding...");
-                forward_message(&receivedPacket); 
+                //forward_message(&receivedPacket); 
             }
         }
         
