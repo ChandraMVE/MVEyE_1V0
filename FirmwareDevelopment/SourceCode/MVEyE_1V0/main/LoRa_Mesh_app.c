@@ -67,8 +67,8 @@
 		xQueueSend(queue, &p, 0); \
 	} while (0)
 		
-#define DST						0x3
-#define Self				    0x3
+#define DST						0x2
+#define Self				    0x2
 #define PING_TIMEOUT 5000
 
 #define STAT_PERIOD_MS			10000
@@ -473,7 +473,7 @@ void LoRa_Mesh(){
     esp_log_level_set("*", ESP_LOG_INFO); 
     ESP_LOGI(TAG, "Compile Time: %s %s", __DATE__, __TIME__); 
     LoRaAppInit();
-    SetCadParams(LLCC68_CAD_ON_16_SYMB, CAD_DET_PEAK, CAD_DET_MIN, LORA_CAD_ONLY, 0);
+    SetCadParams(LLCC68_CAD_ON_16_SYMB, CAD_DET_PEAK, CAD_DET_MIN, LORA_CAD_RX, 0);
     // symbols need to use 16
     static mac_net_param_t param = {
         .mac_hooks.macCadDone = mac_cad_done_hook,
@@ -562,7 +562,7 @@ void LoRa_Mesh(){
    
         if (net_tx_buf && net_rx_buf && mac_tx_buf && mac_rx_buf &&
             app_ping_buf && app_stat_buf && m_irq_Semaphore && m_ack_Semaphore) {
-           xTaskCreate(lora_mac_task, "lora_mac", configMINIMAL_STACK_SIZE + 3000, &param, 3, &lora_mac_handle);
+           xTaskCreate(lora_mac_task, "lora_mac", configMINIMAL_STACK_SIZE + 3500, &param, 3, &lora_mac_handle);
                  // Task for LoRa MAC layer.
             xTaskCreate(lora_net_tx_task, "lora_net_tx", configMINIMAL_STACK_SIZE + 1500, 
                 &param, 2, &lora_net_tx_handle); // Task for LoRa network transmission.

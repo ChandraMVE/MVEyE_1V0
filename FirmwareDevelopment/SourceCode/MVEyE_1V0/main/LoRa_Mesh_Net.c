@@ -180,7 +180,7 @@ void lora_net_tx_task(void *pvParameter)
         if (xQueueReceive(net_tx_buf, &p, portMAX_DELAY) == pdPASS) 
         {
 			ESP_LOGI(TAG, "Destination:%d",p.Header.NetHeader.dst);
-			ESP_LOGI(TAG, "%d",Route.getNetAddr());
+			ESP_LOGI(TAG, "local:%d",Route.getNetAddr());
             // Skip processing if the destination is local
             if (p.Header.NetHeader.dst == Route.getNetAddr())
             {
