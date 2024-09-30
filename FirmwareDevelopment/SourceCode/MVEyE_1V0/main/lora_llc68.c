@@ -403,13 +403,13 @@ void LoRaConfig(uint8_t spreadingFactor, uint8_t bandwidth, uint8_t codingRate, 
 	WriteCommand(LLCC68_CMD_SET_PACKET_PARAMS, PacketParams, 6); // 0x8C
 
 	// Do not use DIO interruptst
-	SetDioIrqParams(LLCC68_IRQ_ALL,   //all interrupts enabled
+	/*SetDioIrqParams(LLCC68_IRQ_ALL,   //all interrupts enabled
 					LLCC68_IRQ_NONE,  //interrupts on DIO1
 					LLCC68_IRQ_NONE,  //interrupts on DIO2
 					LLCC68_IRQ_NONE); //interrupts on DIO3
 
 	// Receive state no receive timeoout
-	SetRx(0xFFFFFF);
+	SetRx(0xFFFFFF);*/
 }
 
 /*******************************************************************************
@@ -450,6 +450,7 @@ void LoRaDebugPrint(bool enable)
 	if( irqRegs & LLCC68_IRQ_RX_DONE )
 	{
 		//ClearIrqStatus(LLCC68_IRQ_RX_DONE);
+		ESP_LOGI(TAG, "irqStatus=0x%x", irqRegs);
 		ClearIrqStatus(LLCC68_IRQ_ALL);
 		rxLen = ReadBuffer(pData, len);
 	}
@@ -1877,19 +1878,23 @@ void RadioStartCad( void )
 void RadioRx( uint32_t timeout )
 {
 	bool RxContinuous = false;
-    SetDioIrqParams( LLCC68_IRQ_RX_DONE | LLCC68_IRQ_TIMEOUT,
-                           LLCC68_IRQ_RX_DONE | LLCC68_IRQ_TIMEOUT,
+    /*SetDioIrqParams( LLCC68_IRQ_RX_DONE | LLCC68_IRQ_TIMEOUT | LLCC68_IRQ_HEADER_ERR | LLCC68_IRQ_CRC_ERR, 
+                           LLCC68_IRQ_RX_DONE | LLCC68_IRQ_TIMEOUT | LLCC68_IRQ_HEADER_ERR | LLCC68_IRQ_CRC_ERR, 
+                           LLCC68_IRQ_NONE,
+                           LLCC68_IRQ_NONE );*/
+	SetDioIrqParams( LLCC68_IRQ_ALL, 
+                           LLCC68_IRQ_ALL, 
                            LLCC68_IRQ_NONE,
                            LLCC68_IRQ_NONE );
-
-    if( RxContinuous == true )
+    /*if( RxContinuous == true )
     {
-        SetRx( 0xFFFFFF ); // Rx Continuous
+        
     }
     else
     {
         SetRx( timeout << 6 );
-    }
+    }*/
+    SetRx( 0xFFFFFF ); // Rx Continuous
   
 }
 

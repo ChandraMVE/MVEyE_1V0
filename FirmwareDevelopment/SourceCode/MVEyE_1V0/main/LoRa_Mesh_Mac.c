@@ -342,12 +342,12 @@ void lora_mac_task(void *pvParameter)
     uint32_t timer;
     uint8_t pkgsize;
     uint8_t pkgbuf[255];
-     uint8_t buffer[255];
+    uint8_t buffer[255];
     PkgType hdr_type;
     LoRaPkg rxtmp, txtmp;
     SleepParams_t sleepConfig;
-    sleepConfig.sleepStart = LLCC68_SLEEP_START_WARM;
-    sleepConfig.rtcStatus = LLCC68_SLEEP_RTC_ON;
+    sleepConfig.sleepStart = LLCC68_SLEEP_START_COLD;
+    sleepConfig.rtcStatus = LLCC68_SLEEP_RTC_OFF;
     mac_net_param_t *param = (mac_net_param_t *)pvParameter;
     lora_mac_hook *hook = &(param->mac_hooks); 
     while (1) 
@@ -366,11 +366,13 @@ void lora_mac_task(void *pvParameter)
                 ESP_LOGI(TAG,"CAD_DETECTED!");
                 ESP_LOGI(TAG,"cad irqRegs:%d",irqRegs);
                 if (hook->macCadDetect != NULL) hook->macCadDetect();
+                 
                 RadioSetMaxPayloadLength( LLCC68_PACKET_TYPE_LORA, 0xff); // Set maximum payload length
                 timer = RTOS_TIME;
                 if (hook->macRxStart != NULL) hook->macRxStart();
-                //SET_RADIO(LoRaReceive(buffer, sizeof(buffer)), irqRegs );
-                SET_RADIO(RadioRx(80), irqRegs);
+                
+                SET_RADIO(RadioRx(200), irqRegs);
+                //LoRaReceive(buffer, sizeof(buffer));
                 ESP_LOGI(TAG,"Receive irqRegs:%d",irqRegs);
                 if (hook->macRxEnd != NULL) hook->macRxEnd();	
                 if (IS_IRQ(irqRegs, LLCC68_IRQ_CRC_ERR) || IS_IRQ(irqRegs, LLCC68_IRQ_HEADER_ERR)) 
@@ -386,9 +388,11 @@ void lora_mac_task(void *pvParameter)
                     phy_rx_done++;
                     GetPayload(pkgbuf, &pkgsize, sizeof(pkgbuf));
 					ESP_LOGI(TAG, "L1: Rx done, size: %u, time: %lu", pkgsize, (unsigned long)(RTOS_TIME - timer));
+					vTaskDelay(pdMS_TO_TICKS(1000));
                     hdr_type = (PkgType)(pkgbuf[0]);
                     if (hdr_type < TYPE_MAX && pkgsize == pkgSizeMap[hdr_type][1]) 
                     {
+						vTaskDelay(pdMS_TO_TICKS(1000));
                         memcpy(&rxtmp, pkgbuf, pkgsize);
                         int8_t rssi, snr;
                         GetPacketStatus(&rssi, &snr);
@@ -413,7 +417,7 @@ void lora_mac_task(void *pvParameter)
                         txtmp.Header.MacHeader.src = Route.getMacAddr();
                         timer = RTOS_TIME;
                         if (hook->macTxStart != NULL) hook->macTxStart();
-                        SET_RADIO(LoRaSend((uint8_t *)&txtmp, pkgsize, TX_TIMEOUT), irqRegs );
+                        //SET_RADIO(LoRaSend((uint8_t *)&txtmp, pkgsize, TX_TIMEOUT), irqRegs );
                         SET_RADIO(RadioSend(TX_TIMEOUT), irqRegs );
                         ESP_LOGI(TAG,"transmission irqRegs:%d",irqRegs);
 						if (hook->macTxEnd != NULL) hook->macTxEnd();
@@ -435,7 +439,7 @@ void lora_mac_task(void *pvParameter)
             }
         }
        	SetSleep(sleepConfig);
-        vTaskDelay(pdMS_TO_TICKS(CAD_PERIOD_MS));
+        vTaskDelay(pdMS_TO_TICKS(1000));
 	}
 
 }
