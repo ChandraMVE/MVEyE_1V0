@@ -439,6 +439,14 @@
 #define	LLCC68_TXEN			CONFIG_TXEN_GPIO
 #define	LLCC68_RXEN			CONFIG_RXEN_GPIO
 #define LLCC68_RESET_SPI    GPIO_NUM_4
+
+#define WaitOnBusy() { \
+    ESP_LOGI(TAG, "Waiting for LORA to become ready..."); \
+    while (gpio_get_level(LORA_BUSY) == 1) { \
+        vTaskDelay(1); \
+    } \
+    ESP_LOGI(TAG, "LORA is now ready."); \
+}
 //==============================================================================
 //  ___      __   ___  __   ___  ___  __
 //   |  \ / |__) |__  |  \ |__  |__  /__`
