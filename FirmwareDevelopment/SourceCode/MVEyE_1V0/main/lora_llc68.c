@@ -1180,6 +1180,7 @@ void SetRx(uint32_t timeout)
 		ESP_LOGE(TAG, "SetRx Illegal Status = 0x%x", GetStatus());
 		LoRaError(ERR_INVALID_SETRX_STATE);
 	}
+	WaitOnBusy();
 }
 
 /*******************************************************************************
@@ -1246,6 +1247,7 @@ void SetRx(uint32_t timeout)
 		ESP_LOGE(TAG, "SetTx Illegal Status");
 		LoRaError(ERR_INVALID_SETTX_STATE);
 	}
+	WaitOnBusy();
 }
 
 /*******************************************************************************
@@ -1325,6 +1327,7 @@ void GetRxBufferStatus(uint8_t *payloadLength, uint8_t *rxStartBufferPointer)
 	ReadCommand( LLCC68_CMD_GET_RX_BUFFER_STATUS, buf, 3 ); // 0x13
 	*payloadLength = buf[1];
 	*rxStartBufferPointer = buf[2];
+	
 }
 
 /*******************************************************************************
@@ -1393,7 +1396,7 @@ uint8_t ReadBuffer(uint8_t *rxData, int16_t rxDataLen)
 
 	// stop transfer
 	gpio_set_level(LLCC68_SPI_SELECT, HIGH);
-
+    WaitOnBusy();
 	// wait for BUSY to go low
 	WaitForIdle(BUSY_WAIT);
 
@@ -1429,7 +1432,7 @@ void WriteBuffer(uint8_t *txData, int16_t txDataLen)
 
 	// stop transfer
 	gpio_set_level(LLCC68_SPI_SELECT, HIGH);
-
+	WaitOnBusy();
 	// wait for BUSY to go low
 	WaitForIdle(BUSY_WAIT);
 }
@@ -1472,7 +1475,7 @@ void WriteRegister(uint16_t reg, uint8_t* data, uint8_t numBytes) {
 
 	// stop transfer
 	gpio_set_level(LLCC68_SPI_SELECT, HIGH);
-
+	WaitOnBusy();
 	// wait for BUSY to go low
 	WaitForIdle(BUSY_WAIT);
 }
@@ -1515,7 +1518,7 @@ void ReadRegister(uint16_t reg, uint8_t* data, uint8_t numBytes) {
 
 	// stop transfer
 	gpio_set_level(LLCC68_SPI_SELECT, HIGH);
-
+	WaitOnBusy();
 	// wait for BUSY to go low
 	WaitForIdle(BUSY_WAIT);
 }
@@ -1544,6 +1547,8 @@ void WriteCommand(uint8_t cmd, uint8_t* data, uint8_t numBytes) {
 		ESP_LOGE(TAG, "SPI Transaction error:0x%02x", status);
 		LoRaError(ERR_SPI_TRANSACTION);
 	}
+	WaitOnBusy();
+	
 }
 
 /*******************************************************************************
@@ -1595,7 +1600,7 @@ uint8_t WriteCommandBusyWait(uint8_t cmd, uint8_t* data, uint8_t numBytes) {
 
 	// stop transfer
 	gpio_set_level(LLCC68_SPI_SELECT, HIGH);
-
+	WaitOnBusy()
 	// wait for BUSY to go low
 	WaitForIdle(BUSY_WAIT);
 	return status;
@@ -1636,7 +1641,7 @@ void ReadCommand(uint8_t cmd, uint8_t* data, uint8_t numBytes) {
 
 	// stop transfer
 	gpio_set_level(LLCC68_SPI_SELECT, HIGH);
-
+	WaitOnBusy();
 	// wait for BUSY to go low
 	WaitForIdle(BUSY_WAIT);
 }
