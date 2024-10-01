@@ -68,7 +68,7 @@
 	} while (0)
 		
 #define DST						0x2
-#define Self				    0x2
+#define Self				    0x1
 #define PING_TIMEOUT 5000
 
 #define STAT_PERIOD_MS			10000

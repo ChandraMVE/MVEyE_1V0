@@ -185,8 +185,10 @@ void app_main(void)
     // Initialize MQTT, WIFI settings and events to handle publish and subscribe topics
     //mqtt_init();
 	//create_mqtt_task();
-	init_dio1_interrupt();
-    LoRa_Mesh();
+	
+	//gpio_init_for_lora_irq();
+	create_lora_task();
+    //LoRa_Mesh();
     // Use main Task to handle CLI
 	while(1)
 	{

@@ -441,12 +441,14 @@
 #define LLCC68_RESET_SPI    GPIO_NUM_4
 
 #define WaitOnBusy() { \
-    ESP_LOGI(TAG, "Waiting for LORA to become ready..."); \
+    ESP_LOGI(TAG, "Waiting for LORA to become ready...%d", LORA_BUSY); \
     while (gpio_get_level(LORA_BUSY) == 1) { \
-        vTaskDelay(1); \
+        ESP_LOGI(TAG, "LORA_BUSY is HIGH (Busy)"); \
+        vTaskDelay(10 / portTICK_PERIOD_MS); /* Delay 10ms */ \
     } \
-    ESP_LOGI(TAG, "LORA is now ready."); \
+    ESP_LOGI(TAG, "LORA_BUSY is LOW (Ready)."); \
 }
+
 //==============================================================================
 //  ___      __   ___  __   ___  ___  __
 //   |  \ / |__) |__  |  \ |__  |__  /__`
