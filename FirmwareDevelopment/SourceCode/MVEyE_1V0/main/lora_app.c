@@ -29,9 +29,9 @@
 //-----------------------------------------------------------------
 
 //==============================================================================
-//          __             __   ___  __
+//          _             _   __  _
 //  | |\ | /  ` |    |  | |  \ |__  /__`
-//  | | \| \__, |___ \__/ |__/ |___ .__/
+//  | | \| \_, |__ \__/ |__/ |__ ._/
 //
 //==============================================================================
 #include "esp_log.h"
@@ -41,48 +41,32 @@
 #include "lora_app.h"
 #include "lora_llc68.h"
 #include <ctype.h>
-#include "string.h"
 //==============================================================================
-//   __   ___  ___         ___  __
-//  |  \ |__  |__  | |\ | |__  /__`
-//  |__/ |___ |    | | \| |___ .__/
+//   _   __  __         __  __
+//  |  \ |_  |_  | |\ | |__  /__`
+//  |__/ |__ |    | | \| |__ .__/
 //
 //==============================================================================
 #define TAG "LORA_APP"
 #define TIMEOUT 100
-#define PING 1
-#define PONG 0
-#define DEVICE_ID 001
-#define DESTINATION_DEVICE_ID 002
-#define MAX_HOPS 5
+#define PING 0
+#define PONG 1
 //==============================================================================
-//   __        __   __                          __   __
-//  / _` |    /  \ |__)  /\  |       \  /  /\  |__) /__`
-//  \__> |___ \__/ |__) /~~\ |___     \/  /~~\ |  \ .__/
-//
-//==============================================================================
-typedef struct {
-	
-    uint8_t senderID;
-    uint8_t destinationID;
-    uint8_t hopCount;
-    char    payload[256];
-    
-} MeshPacket;
-
-uint8_t rxBuffer[256];
-//==============================================================================
-//   __  ___      ___    __                __   __
-//  /__`  |   /\   |  | /  `    \  /  /\  |__) /__`
-//  .__/  |  /~~\  |  | \__,     \/  /~~\ |  \ .__/
+//   _        _   _                          _   __
+//  / ` |    /  \ |_)  /\  |       \  /  /\  |__) /__`
+//  \__> |__ \__/ |_) /~~\ |__     \/  /~~\ |  \ ._/
 //
 //==============================================================================
 // Define the semaphores
+static QueueHandle_t gpio_evt_queue = NULL;
 SemaphoreHandle_t tx_done_semaphore = NULL;
 SemaphoreHandle_t rx_done_semaphore = NULL;
-
-void forward_message(MeshPacket* packet);
-
+//==============================================================================
+//   _  __      __    _                _   _
+//  /__`  |   /\   |  | /  `    \  /  /\  |__) /__`
+//  ._/  |  /~~\  |  | \_,     \/  /~~\ |  \ .__/
+//
+//==============================================================================
 /*******************************************************************************
  * Function name  : task_ping
  *
@@ -95,39 +79,55 @@ void forward_message(MeshPacket* packet);
  * author         : Chandrashekhar Venkatesh
  * date           : 20AUG2024
  ******************************************************************************/
-void task_ping(void *pvParameters) {
-    LoRaAppInit();
-    SetDioIrqParams(LLCC68_IRQ_TX_DONE | LLCC68_IRQ_TIMEOUT, LLCC68_IRQ_TX_DONE | LLCC68_IRQ_TIMEOUT, LLCC68_IRQ_NONE, LLCC68_IRQ_NONE);
-    SetTx(200);
-    ESP_LOGI(pcTaskGetName(NULL), "Start");
+ void task_ping (void *pvParameters)
+ {
+ 	ESP_LOGI(pcTaskGetName(NULL), "Start");
+ 	uint8_t txData[256]; // Maximum Payload size of SX1261/62/68 is 255
+	uint8_t rxData[256]; // Maximum Payload size of SX1261/62/68 is 255
+	enable_dio1_interrupt_Tx();
+	while(1) {
+		//if (xSemaphoreTake(rx_done_semaphore, portMAX_DELAY)) 
+		//{
+			uint16_t Inte = GetIrqStatus();
+			ESP_LOGI(pcTaskGetName(NULL), "Tnte:%d",Inte);
+			TickType_t nowTick = xTaskGetTickCount();
+			int txLen = sprintf((char *)txData, "Hello World %"PRIu32, nowTick);
+			//uint8_t len = strlen((char *)txData);
 
-    MeshPacket packet;
-    packet.senderID = DEVICE_ID;
-    packet.destinationID = DESTINATION_DEVICE_ID;
-    packet.hopCount = 0;
-    strcpy((char *)packet.payload, "Hello, this is MVE");
+			// Wait for transmission to complete
+			if (LoRaSend(txData, txLen, LLCC68_TXMODE_SYNC)) 
+			{
+				ESP_LOGI(pcTaskGetName(NULL), "Send success");
 
-    uint8_t buffer[sizeof(MeshPacket)];
-    memcpy(buffer, &packet, sizeof(MeshPacket));
+				bool waiting = true;
+				TickType_t startTick = xTaskGetTickCount();
+				while(waiting) 
+				{
+					uint8_t rxLen = LoRaReceive(rxData, sizeof(rxData));
+					TickType_t currentTick = xTaskGetTickCount();
+					TickType_t diffTick = currentTick - startTick;
+					if ( rxLen > 0 ) {
+						ESP_LOGI(pcTaskGetName(NULL), "%d byte packet received:[%.*s]", rxLen, rxLen, rxData);
+						ESP_LOGI(pcTaskGetName(NULL), "Response time is %"PRIu32" millisecond", diffTick * portTICK_PERIOD_MS);
+						waiting = false;
+					}
+				
+					ESP_LOGD(pcTaskGetName(NULL), "diffTick=%"PRIu32, diffTick);
+					if (diffTick > TIMEOUT) {
+						ESP_LOGW(pcTaskGetName(NULL), "No response within %d ticks", TIMEOUT);
+						waiting = false;
+					}
+					vTaskDelay(1); // Avoid WatchDog alerts
+				} // end waiting
 
-    while (1) {
-        // Wait for transmission to complete
-        if (LoRaSend(buffer, sizeof(MeshPacket), LLCC68_TXMODE_SYNC)) {
-            // Wait for Tx done signal
-            if (xSemaphoreTake(tx_done_semaphore, portMAX_DELAY)) {
-                ESP_LOGI(TAG, "Transmitting Message-> SendID: %d DestID: %d HopCount: %d PayLoad: %s\r\n",
-                          packet.senderID, packet.destinationID, packet.hopCount, packet.payload);
-                ESP_LOGI(pcTaskGetName(NULL), "Ping message sent");
-            }
-        } else {
-            ESP_LOGE(pcTaskGetName(NULL), "Ping message failed");
-        }
-        ClearIrqStatus(LLCC68_IRQ_TX_DONE);
-    	configure_lora_for_rx();
-        vTaskDelay(pdMS_TO_TICKS(1000)); // Adjust delay as needed
-    }
-}
+			} else {
+				ESP_LOGE(pcTaskGetName(NULL), "Send fail");
+			}
+		//}
 
+		vTaskDelay(pdMS_TO_TICKS(1000));
+	} // end while 
+ }
  /*******************************************************************************
  * Function name  : task_pong
  *
@@ -139,53 +139,64 @@ void task_ping(void *pvParameters) {
  * Note           :
  * author         : Chandrashekhar Venkatesh
  * date           : 20AUG2024
- ******************************************************************************/                 
-void task_pong(void *pvParameters) {
-    configure_lora_for_rx();
-    ESP_LOGI(pcTaskGetName(NULL), "Start");
+ ******************************************************************************/
+ void task_pong (void *pvParameters)
+ {
+	ESP_LOGI(pcTaskGetName(NULL), "Start");
+	uint8_t txData[256]; // Maximum Payload size of SX1261/62/68 is 255
+	uint8_t rxData[256]; // Maximum Payload size of SX1261/62/68 is 255
+	uint32_t io_num;
+	while(1) 
+	{
+			
+		//uint8_t rxLen = LoRaReceive(rxData, sizeof(rxData));
+		if (xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) 
+		{
+			uint8_t IRS = GetIrqStatus();
+			ESP_LOGI(TAG,"IRS:%d",IRS);
+			uint8_t rxLen = LoRaReceive(rxData, sizeof(rxData));
+			if ( rxLen > 0 ) { 
+				printf("Receive rxLen:%d\n", rxLen);
+				for(int i=0;i< rxLen;i++) {
+					printf("%02x ",rxData[i]);
+				}
+				printf("\n");
 
-    MeshPacket receivedPacket;
-    uint8_t buffer[sizeof(MeshPacket)]; // Match the size to MeshPacket
-	uint16_t irqStatus = GetIrqStatus();
-    
-    if (irqStatus & LLCC68_IRQ_RX_DONE) {
-        ClearIrqStatus(LLCC68_IRQ_RX_DONE);
-        // LoRaReceive(rxBuffer, sizeof(rxBuffer));
-        // process_received_packet(rxBuffer, receivedPacketLength);
-    } else if (irqStatus & LLCC68_IRQ_TIMEOUT) {
-        printf("RxTimeout Interrupt\n");
-        ClearIrqStatus(LLCC68_IRQ_TIMEOUT);
-        configure_lora_for_rx();  // Re-enter reception mode
-    }
-    while (1) {
-        // Wait for reception signal
-        if (xSemaphoreTake(rx_done_semaphore, portMAX_DELAY)) {
-            uint8_t rxLen = LoRaReceive(buffer, sizeof(buffer));
-            if (rxLen > 0) {
-                memcpy(&receivedPacket, buffer, sizeof(receivedPacket)); // Ensure you copy received data
-                if (receivedPacket.destinationID == DEVICE_ID) {
-                    ESP_LOGI(TAG, "Message received for me: %s", receivedPacket.payload);
-                    // Send the response
-                    receivedPacket.senderID = DEVICE_ID;
-                    receivedPacket.destinationID = receivedPacket.senderID;
-                    receivedPacket.hopCount = 0;
-                    strcpy((char *)receivedPacket.payload, "Hello, this is MVE2");
-                    if (LoRaSend(buffer, sizeof(MeshPacket), LLCC68_TXMODE_SYNC)) {
-                        ESP_LOGI(TAG, "Pong response sent");
-                    } else {
-                        ESP_LOGE(TAG, "Pong response failed");
-                    }
-                } else {
-                    // Forward the message if it's not for this device
-                    ESP_LOGI(TAG, "Message received for another device, forwarding...");
-                    forward_message(&receivedPacket);
-                }
-            }
-        }
-        vTaskDelay(pdMS_TO_TICKS(100)); // Avoid WatchDog alerts
-    }
-}
-                              
+				for(int i=0;i< rxLen;i++) {
+					if (rxData[i] > 0x19 && rxData[i] < 0x7F) {
+						char myChar = rxData[i];
+						printf("%c", myChar);
+					} else {
+						printf("?");
+					}
+				}
+				printf("\n");
+
+				int8_t rssi, snr;
+				GetPacketStatus(&rssi, &snr);
+				printf("rssi=%d[dBm] snr=%d[dB]\n", rssi, snr);
+
+				for(int i=0;i<rxLen;i++) {
+					if (isupper(rxData[i])) {
+						txData[i] = tolower(rxData[i]);
+					} else {
+						txData[i] = toupper(rxData[i]);
+					}
+				}
+
+				// Wait for transmission to complete
+				/*if (LoRaSend(txData, rxLen, LLCC68_TXMODE_SYNC)) {
+					ESP_LOGD(pcTaskGetName(NULL), "Send success");
+				} else {
+					ESP_LOGE(pcTaskGetName(NULL), "LoRaSend fail");
+				}*/
+			}
+
+		}
+		vTaskDelay(1); // Avoid WatchDog alerts
+	} // end while 
+ }
+ 
 /*******************************************************************************
  * Function name  : create_lora_task
  *
@@ -201,9 +212,26 @@ void task_pong(void *pvParameters) {
 void create_lora_task(void)
 {
 #if PING
+	LoRaAppInit();
+	enable_dio1_interrupt_Tx();
+ 	SetDioIrqParams(LLCC68_IRQ_ALL,   //all interrupts enabled
+					LLCC68_IRQ_TX_DONE|LLCC68_IRQ_TIMEOUT,  //interrupts on DIO1
+					LLCC68_IRQ_NONE,  //interrupts on DIO2
+					LLCC68_IRQ_NONE); //interrupts on DIO3
+
+	SetTx(500);
 	xTaskCreate(&task_ping, "PING", 1024*4, NULL, 5, NULL);
 #endif
-#if PONG	
+#if PONG
+	LoRaAppInit();
+	SetDio2AsRfSwitchCtrl(false);
+	enable_dio3_interrupt_Rx();
+ 	SetDioIrqParams(LLCC68_IRQ_RX_DONE|LLCC68_IRQ_TIMEOUT|LLCC68_IRQ_TIMEOUT,   //all interrupts enabled
+					LLCC68_IRQ_NONE,  //interrupts on DIO1
+					LLCC68_IRQ_NONE,  //interrupts on DIO2
+					LLCC68_IRQ_RX_DONE|LLCC68_IRQ_TIMEOUT|LLCC68_IRQ_TIMEOUT); //interrupts on DIO3
+	SetRx(0xFFFFFFFF);  // Continuous mode
+	
 	xTaskCreate(&task_pong, "PONG", 1024*4, NULL, 5, NULL);
 #endif
 }
@@ -271,7 +299,7 @@ void LoRaAppInit(void)
 	uint8_t spreadingFactor = 11;
 	uint8_t bandwidth = LLCC68_LORA_BW_500_0;
 	uint8_t codingRate = LLCC68_LORA_CR_4_5;
-	uint16_t preambleLength = 12;  //12 need
+	uint16_t preambleLength = 8;
 	uint8_t payloadLen = 0;
 	bool crcOn = true;
 	bool invertIrq = false;
@@ -283,47 +311,9 @@ void LoRaAppInit(void)
 	LoRaConfig(spreadingFactor, bandwidth, codingRate, preambleLength, payloadLen, crcOn, invertIrq);
 }
 
-/*******************************************************************************
- * Function name  : forward_message
- *
- * Description    : maintains the hoping mechanism.
- * Parameters     : packet pointer
- * Returns        : None
- *
- * Known Issues   :
- * Note           :
- * author         : Keerthi Mallesh
- * date           : 06SEP2024
- ******************************************************************************/
- 
-void forward_message(MeshPacket* packet) {
-    if (packet->hopCount >= MAX_HOPS) {
-        ESP_LOGW(TAG, "Message dropped, exceeded max hops");
-        return;
-    }
-
-    packet->hopCount++;
-    if (LoRaSend((uint8_t*)packet, sizeof(MeshPacket), LLCC68_TXMODE_SYNC)) {
-        ESP_LOGI(TAG, "Message forwarded, hop count: %d", packet->hopCount);
-    } else {
-        ESP_LOGE(TAG, "Failed to forward message");
-    }
-}
 
 /***********************************************************************************
- * Function name  : init_dio1_interrupt
- * Description    : Initializes the GPIO interrupt for DIO1. Configures the pin as input 
- *                  with pull-up enabled, and sets the interrupt to trigger on the rising edge.
- * Parameters     : None
- * Returns        : None
- * Known Issues   : None
- * Note           :
- * Author         : C.VenkataSuresh
- * Date           : 20SEP2024
- ***********************************************************************************/
-
-/***********************************************************************************
- * Function name  : enable_dio1_interrupt
+ * Function name  : enable_dio1_interrupt_Tx
  * Description    : Enables the interrupt functionality for the DIO1 pin.
  * Parameters     : None
  * Returns        : None
@@ -337,9 +327,10 @@ void enable_dio1_interrupt_Tx(void)
     gpio_intr_enable(LORA_DIO1); // Enable interrupt
     ESP_LOGI(TAG, "DIO1 interrupt enabled on GPIO %d", LORA_DIO1);
 }
+
 /***********************************************************************************
- * Function name  : disable_dio1_interrupt
- * Description    : Disables the interrupt functionality for the DIO1 pin.
+ * Function name  : disable_dio1_interrupt_Tx
+ * Description    : Disable the interrupt functionality for the DIO1 pin.
  * Parameters     : None
  * Returns        : None
  * Known Issues   : None
@@ -350,15 +341,25 @@ void enable_dio1_interrupt_Tx(void)
 void disable_dio1_interrupt_Tx(void)
 {
     gpio_intr_disable(LORA_DIO1); // Disable interrupt
-    ESP_LOGI(TAG, "DIO1 interrupt disabled on GPIO %d", LORA_DIO1);
-}
-void enable_dio1_interrupt_Rx(void)
-{
-    gpio_intr_enable(LORA_DIO1); // Enable interrupt
-    ESP_LOGI(TAG, "DIO1 interrupt enabled on GPIO %d", LORA_DIO2);
+  // ESP_LOGI(TAG, "DIO1 interrupt disabled on GPIO %d", LORA_DIO1);
 }
 /***********************************************************************************
- * Function name  : disable_dio1_interrupt
+ ** Function name  : enable_dio1_interrupt_Tx
+ * Description    : Enables the interrupt functionality for the DIO1 pin.
+ * Parameters     : None
+ * Returns        : None
+ * Known Issues   : None
+ * Note           : 
+ * Author         : C.VenkataSuresh
+ * Date           : 20SEP2024
+ ***********************************************************************************/
+void enable_dio3_interrupt_Rx(void)
+{
+    gpio_intr_enable(LORA_DIO3); // Enable interrupt
+    ESP_LOGI(TAG, "DIO1 interrupt enabled on GPIO %d", LORA_DIO3);
+}
+/***********************************************************************************
+ * Function name  : disable_dio1_interrupt_Rx
  * Description    : Disables the interrupt functionality for the DIO1 pin.
  * Parameters     : None
  * Returns        : None
@@ -367,23 +368,42 @@ void enable_dio1_interrupt_Rx(void)
  * Author         : C.VenkataSuresh
  * Date           : 20SEP2024
  ***********************************************************************************/
-void disable_dio1_interrupt_Rx(void)
+void disable_dio3_interrupt_Rx(void)
 {
-    gpio_intr_disable(LORA_DIO1); // Disable interrupt
-    ESP_LOGI(TAG, "DIO1 interrupt disabled on GPIO %d", LORA_DIO2);
+    gpio_intr_disable(LORA_DIO3); // Disable interrupt
+    //ESP_LOGI(TAG, "DIO1 interrupt disabled on GPIO %d", LORA_DIO3);
 }
 
-void configure_lora_for_rx(void) {
-	LoRaAppInit();
-	//SetDio2AsRfSwitchCtrl(false);
-    SetDioIrqParams(LLCC68_IRQ_RX_DONE | LLCC68_IRQ_TIMEOUT, LLCC68_IRQ_RX_DONE | LLCC68_IRQ_TIMEOUT, LLCC68_IRQ_NONE,LLCC68_IRQ_NONE);
-    SetRx(0xFFFFFFFF);  // Continuous mode
+
+// ISR Handler for TxDone (DIO1)
+void IRAM_ATTR tx_done_isr_handler(void* arg) {
+  
+   uint32_t gpio_num = (uint32_t) arg;
+   xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
+   disable_dio1_interrupt_Tx();
 }
 
+// ISR Handler for RxDone (DIO3)
+void IRAM_ATTR rx_done_isr_handler(void* arg) {
+     uint32_t gpio_num = (uint32_t) arg;
+     xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
+     disable_dio3_interrupt_Rx();
+    
+}
+/***********************************************************************************
+ * Function name  : init_dio1_interrupt_Tx
+ * Description    : Initializes the GPIO interrupt for DIO1. Configures the pin as input 
+ *                  with pull-up enabled, and sets the interrupt to trigger on the rising edge.
+ * Parameters     : None
+ * Returns        : None
+ * Known Issues   : None
+ * Note           :
+ * Author         : C.VenkataSuresh
+ * Date           : 20SEP2024
+ ***********************************************************************************/
 // Function to initialize GPIO for DIO1 (TxDone) and DIO2 (RxDone)
 void gpio_init_for_lora_irq(void) {
-    tx_done_semaphore = xSemaphoreCreateBinary();
-    rx_done_semaphore = xSemaphoreCreateBinary();
+    gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
      // Configure GPIO for DIO1 (TxDone)
     gpio_config_t io_conf_tx;
     io_conf_tx.intr_type = GPIO_INTR_POSEDGE;  // Trigger interrupt on rising edge
@@ -396,7 +416,7 @@ void gpio_init_for_lora_irq(void) {
     // Configure GPIO for DIO2 (RxDone)
     gpio_config_t io_conf_rx;
     io_conf_rx.intr_type = GPIO_INTR_POSEDGE;  // Trigger interrupt on rising edge
-    io_conf_rx.pin_bit_mask = (1ULL << LORA_DIO2);  // Select GPIO pin
+    io_conf_rx.pin_bit_mask = (1ULL << LORA_DIO3);  // Select GPIO pin
     io_conf_rx.mode = GPIO_MODE_INPUT;  // Set as input mode
     io_conf_rx.pull_up_en = GPIO_PULLUP_ENABLE;  // Enable pull-up
     io_conf_rx.pull_down_en = GPIO_PULLDOWN_DISABLE;  // Disable pull-down
@@ -411,40 +431,16 @@ void gpio_init_for_lora_irq(void) {
 
     // Attach the interrupt handlers for DIO1 and DIO2
     gpio_isr_handler_add(LORA_DIO1, tx_done_isr_handler, (void*) LORA_DIO1);
-    gpio_isr_handler_add(LORA_DIO2, rx_done_isr_handler, (void*) LORA_DIO2);
+    gpio_isr_handler_add(LORA_DIO3, rx_done_isr_handler, (void*) LORA_DIO3);
 }
 
 
-// ISR Handler for TxDone (DIO1)
-void IRAM_ATTR tx_done_isr_handler(void* arg) {
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-     disable_dio1_interrupt_Tx();
-    // Give the semaphore to unblock the waiting task
-    xSemaphoreGiveFromISR(tx_done_semaphore, &xHigherPriorityTaskWoken);
-    // Yield to higher priority task if necessary
-    if (xHigherPriorityTaskWoken == pdTRUE) {
-        portYIELD_FROM_ISR();
-    }
+
+void configure_lora_for_rx(void) {
+	
+    SetDioIrqParams(LLCC68_IRQ_RX_DONE | LLCC68_IRQ_TIMEOUT, LLCC68_IRQ_RX_DONE | LLCC68_IRQ_TIMEOUT, LLCC68_IRQ_NONE,LLCC68_IRQ_NONE);
+    SetRx(0xFFFFFFFF);  // Continuous mode
 }
-
-// ISR Handler for RxDone (DIO2)
-void IRAM_ATTR rx_done_isr_handler(void* arg) {
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-     disable_dio1_interrupt_Rx();
-    // Give the semaphore to unblock the waiting task
-    xSemaphoreGiveFromISR(rx_done_semaphore, &xHigherPriorityTaskWoken);
-    // Yield to higher priority task if necessary
-    if (xHigherPriorityTaskWoken == pdTRUE) {
-        portYIELD_FROM_ISR();
-    }
-}
-
-
-	
-	
-	
-
-
 
 
 

@@ -130,7 +130,7 @@ __attribute__ ((weak, alias ("LoRaErrorDefault"))) void LoRaError(int error);
 
 	txActive = false;
 	debugPrint = false;
-
+	gpio_set_level( LORA_BUSY, true);
 	gpio_set_direction(CONFIG_NSS_GPIO,GPIO_MODE_OUTPUT);
 	gpio_set_direction(CONFIG_RST_GPIO,GPIO_MODE_OUTPUT);
 
@@ -285,7 +285,7 @@ uint8_t spi_transfer(uint8_t address)
 
 	ESP_LOGI(TAG, "LLCC68 installed");
 	SetStandby(LLCC68_STANDBY_RC);
-	SetDio2AsRfSwitchCtrl(true);
+	
 	ESP_LOGI(TAG, "tcxoVoltage=%f", tcxoVoltage);
 	// set TCXO control, if requested
 	if(tcxoVoltage > 0.0) {
@@ -404,12 +404,12 @@ void LoRaConfig(uint8_t spreadingFactor, uint8_t bandwidth, uint8_t codingRate, 
 
 	// Do not use DIO interruptst
 	/*SetDioIrqParams(LLCC68_IRQ_ALL,   //all interrupts enabled
-					LLCC68_IRQ_NONE,  //interrupts on DIO1
+					LLCC68_IRQ_TX_DONE|LLCC68_IRQ_TIMEOUT,  //interrupts on DIO1
 					LLCC68_IRQ_NONE,  //interrupts on DIO2
 					LLCC68_IRQ_NONE); //interrupts on DIO3
 
 	// Receive state no receive timeoout
-	SetRx(0xFFFFFF);*/
+	SetTx(200);*/
 }
 
 /*******************************************************************************
@@ -1180,7 +1180,7 @@ void SetRx(uint32_t timeout)
 		ESP_LOGE(TAG, "SetRx Illegal Status = 0x%x", GetStatus());
 		LoRaError(ERR_INVALID_SETRX_STATE);
 	}
-	WaitOnBusy();
+	//WaitOnBusy();
 }
 
 /*******************************************************************************
@@ -1247,7 +1247,7 @@ void SetRx(uint32_t timeout)
 		ESP_LOGE(TAG, "SetTx Illegal Status");
 		LoRaError(ERR_INVALID_SETTX_STATE);
 	}
-	WaitOnBusy();
+	//WaitOnBusy();
 }
 
 /*******************************************************************************
@@ -1396,7 +1396,7 @@ uint8_t ReadBuffer(uint8_t *rxData, int16_t rxDataLen)
 
 	// stop transfer
 	gpio_set_level(LLCC68_SPI_SELECT, HIGH);
-    WaitOnBusy();
+    //WaitOnBusy();
 	// wait for BUSY to go low
 	WaitForIdle(BUSY_WAIT);
 
@@ -1432,7 +1432,7 @@ void WriteBuffer(uint8_t *txData, int16_t txDataLen)
 
 	// stop transfer
 	gpio_set_level(LLCC68_SPI_SELECT, HIGH);
-	WaitOnBusy();
+	//WaitOnBusy();
 	// wait for BUSY to go low
 	WaitForIdle(BUSY_WAIT);
 }
@@ -1475,7 +1475,7 @@ void WriteRegister(uint16_t reg, uint8_t* data, uint8_t numBytes) {
 
 	// stop transfer
 	gpio_set_level(LLCC68_SPI_SELECT, HIGH);
-	WaitOnBusy();
+	//WaitOnBusy();
 	// wait for BUSY to go low
 	WaitForIdle(BUSY_WAIT);
 }
@@ -1518,7 +1518,7 @@ void ReadRegister(uint16_t reg, uint8_t* data, uint8_t numBytes) {
 
 	// stop transfer
 	gpio_set_level(LLCC68_SPI_SELECT, HIGH);
-	WaitOnBusy();
+	//WaitOnBusy();
 	// wait for BUSY to go low
 	WaitForIdle(BUSY_WAIT);
 }
@@ -1547,7 +1547,7 @@ void WriteCommand(uint8_t cmd, uint8_t* data, uint8_t numBytes) {
 		ESP_LOGE(TAG, "SPI Transaction error:0x%02x", status);
 		LoRaError(ERR_SPI_TRANSACTION);
 	}
-	WaitOnBusy();
+	//WaitOnBusy();
 	
 }
 
@@ -1600,7 +1600,7 @@ uint8_t WriteCommandBusyWait(uint8_t cmd, uint8_t* data, uint8_t numBytes) {
 
 	// stop transfer
 	gpio_set_level(LLCC68_SPI_SELECT, HIGH);
-	WaitOnBusy()
+	//WaitOnBusy()
 	// wait for BUSY to go low
 	WaitForIdle(BUSY_WAIT);
 	return status;
@@ -1641,7 +1641,7 @@ void ReadCommand(uint8_t cmd, uint8_t* data, uint8_t numBytes) {
 
 	// stop transfer
 	gpio_set_level(LLCC68_SPI_SELECT, HIGH);
-	WaitOnBusy();
+	//WaitOnBusy();
 	// wait for BUSY to go low
 	WaitForIdle(BUSY_WAIT);
 }
@@ -1652,7 +1652,6 @@ void ReadCommand(uint8_t cmd, uint8_t* data, uint8_t numBytes) {
  * Description    : spi_init function
  * Parameters     : None
  * Returns        : None
- *
  * Known Issues   :
  * Note           :
  * author         : Keerthi Mallesh 
@@ -1671,6 +1670,7 @@ void init_spi() {
     };
 
     ret = spi_bus_initialize(SPI2_HOST, &buscfg, SPI_DMA_CH_AUTO);
+    ret = -100;
     ESP_ERROR_CHECK(ret);
 
     spi_device_interface_config_t devcfg = {
@@ -1883,14 +1883,14 @@ void RadioStartCad( void )
 void RadioRx( uint32_t timeout )
 {
 	bool RxContinuous = false;
-    /*SetDioIrqParams( LLCC68_IRQ_RX_DONE | LLCC68_IRQ_TIMEOUT | LLCC68_IRQ_HEADER_ERR | LLCC68_IRQ_CRC_ERR, 
-                           LLCC68_IRQ_RX_DONE | LLCC68_IRQ_TIMEOUT | LLCC68_IRQ_HEADER_ERR | LLCC68_IRQ_CRC_ERR, 
+    SetDioIrqParams( LLCC68_IRQ_RX_DONE | LLCC68_IRQ_TIMEOUT | LLCC68_IRQ_HEADER_ERR | LLCC68_IRQ_CRC_ERR, 
+                           LLCC68_IRQ_NONE, 
                            LLCC68_IRQ_NONE,
-                           LLCC68_IRQ_NONE );*/
-	SetDioIrqParams( LLCC68_IRQ_ALL, 
+                            LLCC68_IRQ_RX_DONE | LLCC68_IRQ_TIMEOUT | LLCC68_IRQ_HEADER_ERR | LLCC68_IRQ_CRC_ERR );
+	/*SetDioIrqParams( LLCC68_IRQ_ALL, 
                            LLCC68_IRQ_ALL, 
                            LLCC68_IRQ_NONE,
-                           LLCC68_IRQ_NONE );
+                           LLCC68_IRQ_NONE );*/
     /*if( RxContinuous == true )
     {
         

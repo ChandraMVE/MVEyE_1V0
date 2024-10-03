@@ -155,10 +155,30 @@ void init_dio1_interrupt(void)
         .pull_up_en = 1,                  // Enable pull-up
     };
     gpio_config(&io_conf);
+    
+     // Configure GPIO for DIO2 (RxDone)
+    gpio_config_t io_conf_rx;
+    io_conf_rx.intr_type = GPIO_INTR_POSEDGE;  // Trigger interrupt on rising edge
+    io_conf_rx.pin_bit_mask = (1ULL << LORA_DIO3);  // Select GPIO pin
+    io_conf_rx.mode = GPIO_MODE_INPUT;  // Set as input mode
+    io_conf_rx.pull_up_en = GPIO_PULLUP_ENABLE;  // Enable pull-up
+    io_conf_rx.pull_down_en = GPIO_PULLDOWN_DISABLE;  // Disable pull-down
+    gpio_config(&io_conf_rx);
+
+    // Install the ISR service only if not already installed
+    static bool isr_service_installed = false;
+    if (!isr_service_installed) {
+        gpio_install_isr_service(0);
+        isr_service_installed = true;
+    }
+
+    
+  
 
     gpio_install_isr_service(0);
 
     gpio_isr_handler_add(LORA_DIO1, dio1_isr_handler, (void*)LORA_DIO1);
+    gpio_isr_handler_add(LORA_DIO3, rx_done_isr_handler, (void*) LORA_DIO3);
 
     ESP_LOGI(TAG, "DIO1 interrupt initialized on GPIO %d", LORA_DIO1);
 }
