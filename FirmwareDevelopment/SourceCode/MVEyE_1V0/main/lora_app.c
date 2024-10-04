@@ -376,7 +376,7 @@ void disable_dio3_interrupt_Rx(void)
 
 
 // ISR Handler for TxDone (DIO1)
-void IRAM_ATTR tx_done_isr_handler(void* arg) {
+/*void IRAM_ATTR tx_done_isr_handler(void* arg) {
   
    uint32_t gpio_num = (uint32_t) arg;
    xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
@@ -389,7 +389,7 @@ void IRAM_ATTR rx_done_isr_handler(void* arg) {
      xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
      disable_dio3_interrupt_Rx();
     
-}
+}*/
 /***********************************************************************************
  * Function name  : init_dio1_interrupt_Tx
  * Description    : Initializes the GPIO interrupt for DIO1. Configures the pin as input 
@@ -402,7 +402,7 @@ void IRAM_ATTR rx_done_isr_handler(void* arg) {
  * Date           : 20SEP2024
  ***********************************************************************************/
 // Function to initialize GPIO for DIO1 (TxDone) and DIO2 (RxDone)
-void gpio_init_for_lora_irq(void) {
+/*void gpio_init_for_lora_irq(void) {
     gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
      // Configure GPIO for DIO1 (TxDone)
     gpio_config_t io_conf_tx;
@@ -442,7 +442,7 @@ void configure_lora_for_rx(void) {
     SetRx(0xFFFFFFFF);  // Continuous mode
 }
 
-
+*/
 
 
 

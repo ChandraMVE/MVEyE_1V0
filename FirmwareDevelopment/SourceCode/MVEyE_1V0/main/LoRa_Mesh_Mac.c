@@ -65,9 +65,19 @@
 	
 #define SET_RADIO(fun, irq) \
     do { \
-        enable_dio1_interrupt(); \
+        uint32_t io_num;            \
+        gpio_intr_enable(LORA_DIO1); \
         fun; \
-        xSemaphoreTake(m_irq_Semaphore, portMAX_DELAY);  \
+        xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY);  \
+        irq = GetIrqStatus();  \
+        ClearIrqStatus(LLCC68_IRQ_ALL);  \
+    } while (0)
+#define SET_RADIO2(fun, irq) \
+    do { \
+        uint32_t io_num; \
+        gpio_intr_enable(LORA_DIO3); \
+        fun; \
+        xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY);  \
         irq = GetIrqStatus();  \
         ClearIrqStatus(LLCC68_IRQ_ALL);  \
     } while (0)
@@ -83,11 +93,13 @@
 extern uint8_t ack_wait_id;      
 extern uint32_t ack_time;        
 SemaphoreHandle_t m_irq_Semaphore;
+SemaphoreHandle_t m_irq2_Semaphore;
 TaskHandle_t lora_net_rx_handle;
 QueueHandle_t mac_tx_buf;       
 QueueHandle_t mac_rx_buf; 
 TaskHandle_t lora_mac_handle;     
 extern TaskHandle_t app_recv_handle; 
+extern uint32_t io_num;
 //==============================================================================
 //   __  ___      ___    __                __   __
 //  /__`  |   /\   |  | /  `    \  /  /\  |__) /__`
@@ -114,7 +126,8 @@ uint32_t mac_rx_done;
 uint32_t mac_rx_drop;           
 uint32_t mac_tx_done;           
 uint32_t mac_ack_respon;        
-static uint8_t tx_timer;        
+static uint8_t tx_timer;       
+static QueueHandle_t gpio_evt_queue = NULL; 
 /*******************************************************************************
  * Function: dio1_isr_handler
  * Description: Interrupt Service Routine (ISR) for DIO1 pin. 
@@ -124,15 +137,18 @@ static uint8_t tx_timer;
  * Author         : C.VenkataSuresh
  * Date           : 20SEP2024
  ******************************************************************************/
-static void IRAM_ATTR dio1_isr_handler(void *arg) {
-    BaseType_t yield_req = pdFALSE;  
-   	gpio_intr_disable(LORA_DIO1);
+void IRAM_ATTR dio1_isr_handler(void *arg) {
     // Give semaphore from ISR
-    xSemaphoreGiveFromISR(m_irq_Semaphore, &yield_req);
-    // If a higher priority task was woken, yield to it immediately
-    if (yield_req == pdTRUE) {
-        portYIELD_FROM_ISR();  // Perform context switch if required
-    }
+    uint32_t gpio_num = (uint32_t) arg;
+    xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
+    gpio_intr_disable(LORA_DIO1);
+    
+}
+void IRAM_ATTR rx_done_isr_handler(void *arg) {
+   	uint32_t gpio_num = (uint32_t) arg;
+    xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
+    gpio_intr_disable(LORA_DIO3);
+   
 }
 /***********************************************************************************
  * Function name  : init_dio1_interrupt
@@ -147,6 +163,7 @@ static void IRAM_ATTR dio1_isr_handler(void *arg) {
  ***********************************************************************************/
 void init_dio1_interrupt(void)
 {
+    gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
     gpio_config_t io_conf = {
         .intr_type = GPIO_INTR_POSEDGE,   // Interrupt on Rising edge
         .mode = GPIO_MODE_INPUT,          // Set pin as input
@@ -172,11 +189,6 @@ void init_dio1_interrupt(void)
         isr_service_installed = true;
     }
 
-    
-  
-
-    gpio_install_isr_service(0);
-
     gpio_isr_handler_add(LORA_DIO1, dio1_isr_handler, (void*)LORA_DIO1);
     gpio_isr_handler_add(LORA_DIO3, rx_done_isr_handler, (void*) LORA_DIO3);
 
@@ -195,7 +207,6 @@ void init_dio1_interrupt(void)
 void enable_dio1_interrupt(void)
 {
     gpio_intr_enable(LORA_DIO1); // Enable interrupt
-    ESP_LOGI(TAG, "DIO1 interrupt enabled on GPIO %d", LORA_DIO1);
 }
 /***********************************************************************************
  * Function name  : disable_dio1_interrupt
@@ -210,7 +221,6 @@ void enable_dio1_interrupt(void)
 void disable_dio1_interrupt(void)
 {
     gpio_intr_disable(LORA_DIO1); // Disable interrupt
-    ESP_LOGI(TAG, "DIO1 interrupt disabled on GPIO %d", LORA_DIO1);
 }
 
 /***********************************************************************************
@@ -390,9 +400,8 @@ void lora_mac_task(void *pvParameter)
                 RadioSetMaxPayloadLength( LLCC68_PACKET_TYPE_LORA, 0xff); // Set maximum payload length
                 timer = RTOS_TIME;
                 if (hook->macRxStart != NULL) hook->macRxStart();
-                
-                SET_RADIO(RadioRx(200), irqRegs);
-                //LoRaReceive(buffer, sizeof(buffer));
+                SET_RADIO2(RadioRx(200), irqRegs);
+                LoRaReceive(buffer, sizeof(buffer));
                 ESP_LOGI(TAG,"Receive irqRegs:%d",irqRegs);
                 if (hook->macRxEnd != NULL) hook->macRxEnd();	
                 if (IS_IRQ(irqRegs, LLCC68_IRQ_CRC_ERR) || IS_IRQ(irqRegs, LLCC68_IRQ_HEADER_ERR)) 

@@ -246,6 +246,9 @@ void lora_net_tx_task (void * pvParameter);
 void lora_net_rx_task (void * pvParameter);
 void lora_mac_task(void * pvParameter);
 void init_dio1_interrupt(void);
+void dio1_isr_handler(void *arg);
+void rx_done_isr_handler(void *arg);
+
 
 
 #endif /* MAIN_LORA_MESH_NET_H_ */

@@ -1868,6 +1868,7 @@ void RadioStartCad( void )
     SetDioIrqParams( LLCC68_IRQ_CAD_DONE|LLCC68_IRQ_CAD_DETECTED,
                            LLCC68_IRQ_CAD_DONE|LLCC68_IRQ_CAD_DETECTED,
                            LLCC68_IRQ_NONE, LLCC68_IRQ_NONE );
+    
     SetCad();
 }
 /***********************************************************************************
@@ -1887,6 +1888,7 @@ void RadioRx( uint32_t timeout )
                            LLCC68_IRQ_NONE, 
                            LLCC68_IRQ_NONE,
                             LLCC68_IRQ_RX_DONE | LLCC68_IRQ_TIMEOUT | LLCC68_IRQ_HEADER_ERR | LLCC68_IRQ_CRC_ERR );
+	SetDio2AsRfSwitchCtrl(false);
 	/*SetDioIrqParams( LLCC68_IRQ_ALL, 
                            LLCC68_IRQ_ALL, 
                            LLCC68_IRQ_NONE,
@@ -1949,6 +1951,6 @@ void RadioSend( uint32_t timeout )
                            LLCC68_IRQ_TX_DONE | LLCC68_IRQ_TIMEOUT,
                            LLCC68_IRQ_NONE,
                            LLCC68_IRQ_NONE );
-
+	SetDio2AsRfSwitchCtrl(true);
     SetTx( timeout);
 }
