@@ -69,7 +69,7 @@
 		
 #define DST						0x2
 #define Self				    0x2
-#define PING_TIMEOUT 5000
+#define PING_TIMEOUT 			5000
 
 #define STAT_PERIOD_MS			10000
 
@@ -117,7 +117,7 @@ static TaskHandle_t app_upload_handle;
  * author         : Venkata Suresh
  * date           : 20SEP2024
  ***********************************************************************************/
-static void app_upload_task (void * pvParameter)
+/*static void app_upload_task (void * pvParameter)
 {
 	//float volatile temp;
 	
@@ -137,7 +137,48 @@ static void app_upload_task (void * pvParameter)
 		 ESP_LOGI(TAG," Upload complete");
 		 vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
+}*/
+
+static void app_upload_task(void *pvParameter)
+{
+    // Sample data structure for the LoRa packet
+    LoRaPkg p = {
+        .Header.type = TYPE_DATA, // Ensure this matches a defined type
+        .Header.NetHeader.src = Self,
+        .Header.NetHeader.dst = DST,
+        .Header.NetHeader.subtype = SUB_DATA,
+        .Header.NetHeader.ack = ACK_CONFIG,
+    };
+
+    while (1)
+    {    
+        ESP_LOGI(TAG, "I am in upload Task");
+
+        // Set sample data
+        p.AppData.temp = 43.4;
+        p.AppData.volt = 35;
+
+        // Debug log before sending
+        ESP_LOGI(TAG, "Sending packet with header type: %u", p.Header.type);
+
+        // Check if header type is valid
+        if (p.Header.type >= TYPE_MAX) {
+            ESP_LOGE(TAG, "Error: Invalid header type: %u", p.Header.type);
+            continue; // Skip sending this packet
+        }
+        else{
+			ESP_LOGI(TAG, "No Error: valid header type is passing : %u", p.Header.type);
+		}
+
+        // Send the packet using the APP_TX function
+        APP_TX(p, net_tx_buf, 0);
+        ESP_LOGI(TAG, "Upload complete");
+
+        // Delay before sending the next packet
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
 }
+
 /***********************************************************************************
  * Function name  : app_ping_task
  *

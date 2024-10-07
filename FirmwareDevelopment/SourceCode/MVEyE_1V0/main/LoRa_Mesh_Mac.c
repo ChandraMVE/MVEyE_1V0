@@ -363,7 +363,7 @@ static void mac_rx_handle(LoRaPkg* p)
  *
  * Known Issues   : None
  * Note           : 
- * Author         : C. VenkataSuresh
+ * Author         : C.VenkataSuresh
  * Date           : 20SEP2024
  ***********************************************************************************/
 /*void lora_mac_task(void *pvParameter)
@@ -473,6 +473,18 @@ static void mac_rx_handle(LoRaPkg* p)
 
 }
 */
+/***********************************************************************************
+ * Function name  : lora_mac_receive_task
+ *
+ * Description    : Manages the LoRa MAC layer, handling reception of LoRa packets. 
+ * Parameters     : pvParameter - Pointer to MAC network parameters (mac_net_param_t).
+ * Returns        : None (void).
+ *
+ * Known Issues   : None
+ * Note           : 
+ * Author         : C.VenkataSuresh
+ * Date           : 20SEP2024
+ ***********************************************************************************/
 void lora_mac_receive_task(void *pvParameter)
 {
     uint16_t irqRegs;
@@ -505,7 +517,7 @@ void lora_mac_receive_task(void *pvParameter)
                 if (hook->macRxStart != NULL) hook->macRxStart();
 
                 SET_RADIO2(RadioRx(RX_TIMEOUT), irqRegs);
-                LoRaReceive(buffer, sizeof(buffer));
+                //LoRaReceive(buffer, sizeof(buffer));
                 ESP_LOGI(TAG,"Receive irqRegs:%d", irqRegs);
 
                 if (hook->macRxEnd != NULL) hook->macRxEnd();
@@ -526,17 +538,41 @@ void lora_mac_receive_task(void *pvParameter)
                     GetPayload(pkgbuf, &pkgsize, sizeof(pkgbuf));
                     ESP_LOGI(TAG, "RX done, size: %u, time: %lu", pkgsize, (unsigned long)(RTOS_TIME - timer));
 
-                    hdr_type = (PkgType)(pkgbuf[0]);
-                    if (hdr_type < TYPE_MAX && pkgsize == pkgSizeMap[hdr_type][1]) 
-                    {
-                        memcpy(&rxtmp, pkgbuf, pkgsize);
-                        int8_t rssi, snr;
-                        GetPacketStatus(&rssi, &snr);
-                        rxtmp.stat.RssiPkt = rssi;
-                        rxtmp.stat.SnrPkt = snr;
-                        mac_rx_handle(&rxtmp);
-                        ESP_LOGI(TAG, "RX done");
-                    }
+                   hdr_type = (PkgType)(pkgbuf[0]);
+
+					// Log the received header type and package size
+					ESP_LOGI(TAG, "Received packet header: %d", hdr_type);
+					ESP_LOGI(TAG, "Package size: %d", pkgsize);
+                    mac_rx_handle(&rxtmp);
+                    // Check if the header type is valid and the package size matches expected size
+					if (hdr_type < TYPE_MAX && pkgsize == pkgSizeMap[hdr_type][1]) 
+					{
+    					ESP_LOGI(TAG, "Valid header type: %d and valid package size: %d", hdr_type, pkgsize);
+    
+    					// Copy the package buffer to the structure for further processing
+    					memcpy(&rxtmp, pkgbuf, pkgsize);
+    
+    					// Retrieve RSSI and SNR values from the packet status
+    					int8_t rssi, snr;
+    					GetPacketStatus(&rssi, &snr);
+    
+    					// Store the RSSI and SNR values in the package structure
+    					rxtmp.stat.RssiPkt = rssi;
+    					rxtmp.stat.SnrPkt = snr;
+    
+    					// Log the RSSI and SNR values
+    					ESP_LOGI(TAG, "RSSI: %d, SNR: %d", rssi, snr);
+    
+    					// Handle the received packet by passing it to the mac_rx_handle function
+    					mac_rx_handle(&rxtmp);
+    
+    					// Log the successful packet processing
+    					ESP_LOGI(TAG, "Packet processed successfully.");
+					}else 
+					{
+    					// Log an error if the header type or package size is invalid
+    					ESP_LOGE(TAG, "Invalid header type: %d or package size: %d", hdr_type, pkgsize);
+					}
                 }
             }
         }
@@ -546,6 +582,20 @@ void lora_mac_receive_task(void *pvParameter)
 
 
 
+
+
+/***********************************************************************************
+ * Function name  : lora_mac_transmit_task
+ *
+ * Description    : Manages the LoRa MAC layer, handling Transmission of LoRa packets. 
+ * Parameters     : pvParameter - Pointer to MAC network parameters (mac_net_param_t).
+ * Returns        : None (void).
+ *
+ * Known Issues   : None
+ * Note           : 
+ * Author         : C.VenkataSuresh
+ * Date           : 20SEP2024
+ ***********************************************************************************/
 void lora_mac_transmit_task(void *pvParameter)
 {
     uint16_t irqRegs;
