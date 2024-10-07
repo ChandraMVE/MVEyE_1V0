@@ -366,7 +366,7 @@ static void mac_rx_handle(LoRaPkg* p)
  * Author         : C. VenkataSuresh
  * Date           : 20SEP2024
  ***********************************************************************************/
-void lora_mac_task(void *pvParameter)
+/*void lora_mac_task(void *pvParameter)
 {
     uint16_t irqRegs;
     uint32_t timer;
@@ -472,3 +472,133 @@ void lora_mac_task(void *pvParameter)
 	}
 
 }
+*/
+void lora_mac_receive_task(void *pvParameter)
+{
+    uint16_t irqRegs;
+    uint32_t timer;
+    uint8_t pkgsize;
+    uint8_t pkgbuf[255];
+    uint8_t buffer[255];
+    PkgType hdr_type;
+    LoRaPkg rxtmp;
+    mac_net_param_t *param = (mac_net_param_t *)pvParameter;
+    lora_mac_hook *hook = &(param->mac_hooks);
+
+    while (1) 
+    {
+        ESP_LOGI(TAG,"LoRa RX Task: Waiting for CAD");
+        SetStandby(LLCC68_STANDBY_RC);
+        SET_RADIO(RadioStartCad(), irqRegs);
+        
+        if (IS_IRQ(irqRegs, LLCC68_IRQ_CAD_DONE)) 
+        {
+            phy_cad_done++;
+            if (hook->macCadDone != NULL) hook->macCadDone();
+
+            if (IS_IRQ(irqRegs, LLCC68_IRQ_CAD_DETECTED)) 
+            {
+                phy_cad_det++;
+                ESP_LOGI(TAG,"CAD_DETECTED!");
+                RadioSetMaxPayloadLength(LLCC68_PACKET_TYPE_LORA, 0xff); // Set maximum payload length
+                timer = RTOS_TIME;
+                if (hook->macRxStart != NULL) hook->macRxStart();
+
+                SET_RADIO2(RadioRx(RX_TIMEOUT), irqRegs);
+                LoRaReceive(buffer, sizeof(buffer));
+                ESP_LOGI(TAG,"Receive irqRegs:%d", irqRegs);
+
+                if (hook->macRxEnd != NULL) hook->macRxEnd();
+
+                if (IS_IRQ(irqRegs, LLCC68_IRQ_CRC_ERR) || IS_IRQ(irqRegs, LLCC68_IRQ_HEADER_ERR)) 
+                {
+                    phy_rx_err++;
+                    ESP_LOGI(TAG,"RX error!");
+                } 
+                else if (IS_IRQ(irqRegs, LLCC68_IRQ_TIMEOUT)) 
+                {
+                    phy_rx_timeout++;
+                    ESP_LOGI(TAG,"RX timeout!");
+                } 
+                else if (IS_IRQ(irqRegs, LLCC68_IRQ_RX_DONE)) 
+                {
+                    phy_rx_done++;
+                    GetPayload(pkgbuf, &pkgsize, sizeof(pkgbuf));
+                    ESP_LOGI(TAG, "RX done, size: %u, time: %lu", pkgsize, (unsigned long)(RTOS_TIME - timer));
+
+                    hdr_type = (PkgType)(pkgbuf[0]);
+                    if (hdr_type < TYPE_MAX && pkgsize == pkgSizeMap[hdr_type][1]) 
+                    {
+                        memcpy(&rxtmp, pkgbuf, pkgsize);
+                        int8_t rssi, snr;
+                        GetPacketStatus(&rssi, &snr);
+                        rxtmp.stat.RssiPkt = rssi;
+                        rxtmp.stat.SnrPkt = snr;
+                        mac_rx_handle(&rxtmp);
+                        ESP_LOGI(TAG, "RX done");
+                    }
+                }
+            }
+        }
+        vTaskDelay(pdMS_TO_TICKS(1000));  // Delay to avoid tight looping
+    }
+}
+
+
+
+void lora_mac_transmit_task(void *pvParameter)
+{
+    uint16_t irqRegs;
+    uint32_t timer;
+    uint8_t pkgsize;
+    PkgType hdr_type;
+    LoRaPkg txtmp;
+    mac_net_param_t *param = (mac_net_param_t *)pvParameter;
+    lora_mac_hook *hook = &(param->mac_hooks);
+
+    while (1) 
+    {
+        if (uxQueueMessagesWaiting(mac_tx_buf) != 0) 
+        {
+            if (tx_timer == 0 && xQueueReceive(mac_tx_buf, &txtmp, 0) == pdPASS) 
+            {
+                mac_tx_done++;
+                tx_timer = (xTaskGetTickCount() & TX_TIMER_MASK);
+                hdr_type = txtmp.Header.type;
+                pkgsize = (hdr_type < TYPE_MAX) ? pkgSizeMap[hdr_type][1] : SIZE_PKG_MAX;
+                txtmp.Header.MacHeader.src = Route.getMacAddr();
+                timer = RTOS_TIME;
+
+                if (hook->macTxStart != NULL) hook->macTxStart();
+
+                SET_RADIO(RadioSend(TX_TIMEOUT), irqRegs);
+                ESP_LOGI(TAG, "Transmission irqRegs: %d", irqRegs);
+
+                if (hook->macTxEnd != NULL) hook->macTxEnd();
+
+                if (txtmp.Header.type == TYPE_DATA && txtmp.Header.NetHeader.ack == ACK) 
+                {
+                    xSemaphoreGive(m_ack_Semaphore);
+                }
+
+                if (IS_IRQ(irqRegs, LLCC68_IRQ_TX_DONE)) 
+                {
+                    ESP_LOGI(TAG, "TX done, size: %u, time: %lu", pkgsize, (unsigned long)(RTOS_TIME - timer));
+                    phy_tx_done++;
+                } 
+                else 
+                {
+                    ESP_LOGI(TAG,"TX error/timeout!");
+                    phy_tx_err++;
+                }
+            } 
+            else 
+            {
+                --tx_timer;
+            }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(1000));  // Delay to avoid tight looping
+    }
+}
+

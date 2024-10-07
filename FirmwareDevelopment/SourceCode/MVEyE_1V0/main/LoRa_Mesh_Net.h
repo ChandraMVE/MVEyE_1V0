@@ -248,6 +248,8 @@ void lora_mac_task(void * pvParameter);
 void init_dio1_interrupt(void);
 void dio1_isr_handler(void *arg);
 void rx_done_isr_handler(void *arg);
+void lora_mac_receive_task(void *pvParameter);
+void lora_mac_transmit_task(void *pvParameter);
 
 
 

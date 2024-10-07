@@ -186,10 +186,10 @@ void app_main(void)
     //mqtt_init();
 	//create_mqtt_task();
 	
-	gpio_init_for_lora_irq();
-	//init_dio1_interrupt();
-	create_lora_task();
-    //LoRa_Mesh();
+	//gpio_init_for_lora_irq();
+	init_dio1_interrupt();
+	//create_lora_task();
+    LoRa_Mesh();
     // Use main Task to handle CLI
 	while(1)
 	{
