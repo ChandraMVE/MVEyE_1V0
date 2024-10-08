@@ -49,7 +49,7 @@
 //  |__/ |___ |    | | \| |___ .__/
 //
 //==============================================================================
-#define TAG "LORA_MAC"
+#define TAG "LORA_NET"
 
 #define NET_TX(p, queue, timeout, h) \
 	do { \
@@ -179,7 +179,10 @@ void lora_net_tx_task(void *pvParameter)
 		ESP_LOGI(TAG,"I am in LoRa Net_TX");
         if (xQueueReceive(net_tx_buf, &p, portMAX_DELAY) == pdPASS) 
         {
-			ESP_LOGI(TAG, "Destination:%d",p.Header.NetHeader.dst);
+			//ESP_LOGI(TAG, "Destination:%d",p.Header.NetHeader.dst);
+			ESP_LOGI(TAG, "network Sending packet - type: %u, src: %u, dst: %u, temp: %.2f, volt: %u", 
+                 p.Header.type, p.Header.NetHeader.src, p.Header.NetHeader.dst,
+                 p.AppData.temp, p.AppData.volt);
 			ESP_LOGI(TAG, "local:%d",Route.getNetAddr());
             // Skip processing if the destination is local
             if (p.Header.NetHeader.dst == Route.getNetAddr())

@@ -141,36 +141,36 @@ static TaskHandle_t app_upload_handle;
 
 static void app_upload_task(void *pvParameter)
 {
-    // Sample data structure for the LoRa packet
     LoRaPkg p = {
-        .Header.type = TYPE_DATA, // Ensure this matches a defined type
+        .Header.type = TYPE_DATA,
         .Header.NetHeader.src = Self,
         .Header.NetHeader.dst = DST,
         .Header.NetHeader.subtype = SUB_DATA,
-        .Header.NetHeader.ack = ACK_CONFIG,
+        .Header.NetHeader.ack = ACK_CONFIG
     };
 
     while (1)
     {    
-        ESP_LOGI(TAG, "I am in upload Task");
+        ESP_LOGI(TAG, "In upload Task");
 
         // Set sample data
-        p.AppData.temp = 43.4;
-        p.AppData.volt = 35;
+        p.AppData.temp = 43.4; // Example temperature
+        p.AppData.volt = 35;   // Example voltage
 
-        // Debug log before sending
-        ESP_LOGI(TAG, "Sending packet with header type: %u", p.Header.type);
+        ESP_LOGI(TAG, "Size of LoRaPkg: %zu", sizeof(LoRaPkg)); // Log the size of the package
 
-        // Check if header type is valid
+        // Log header before sending
+        ESP_LOGI(TAG, "Sending packet - type: %u, src: %u, dst: %u, temp: %.2f, volt: %u", 
+                 p.Header.type, p.Header.NetHeader.src, p.Header.NetHeader.dst,
+                 p.AppData.temp, p.AppData.volt);
+
+        // Check header type validity
         if (p.Header.type >= TYPE_MAX) {
             ESP_LOGE(TAG, "Error: Invalid header type: %u", p.Header.type);
             continue; // Skip sending this packet
         }
-        else{
-			ESP_LOGI(TAG, "No Error: valid header type is passing : %u", p.Header.type);
-		}
 
-        // Send the packet using the APP_TX function
+        // Send the packet using the APP_TX macro
         APP_TX(p, net_tx_buf, 0);
         ESP_LOGI(TAG, "Upload complete");
 
@@ -178,6 +178,7 @@ static void app_upload_task(void *pvParameter)
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
+
 
 /***********************************************************************************
  * Function name  : app_ping_task

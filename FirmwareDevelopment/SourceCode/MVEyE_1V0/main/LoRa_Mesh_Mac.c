@@ -240,7 +240,7 @@ bool mac_peek_pkg(LoRaPkg* p) {
     uint8_t i;
     ESP_LOGI(TAG,"L2: nsrc: 0x%02x, ndst: 0x%02x, msrc: 0x%02x, mdst: 0x%02x",
         p->Header.NetHeader.src, p->Header.NetHeader.dst, p->Header.MacHeader.src, p->Header.MacHeader.dst);
-    
+    ESP_LOGI(TAG,"p->Header.type: 0x%d, p->Header.NetHeader.subtype: 0x%d,TYPE_RA:%d ,SUB_RA:%d",p->Header.type,p->Header.NetHeader.subtype,TYPE_RA,SUB_RA);
     if (p->Header.type == TYPE_RA && p->Header.NetHeader.subtype == SUB_RA) {
         for (i = 0; i < p->RouteData.hops; i++) {
             ESP_LOGI(TAG,"L2: recv RA_List_%d: 0x%02x", i, p->RouteData.RA_List[i]); // Log RA list
@@ -270,6 +270,7 @@ bool mac_peek_pkg(LoRaPkg* p) {
             return false;
         }
     }
+     ESP_LOGI(TAG,"L2: exit!");
     return true;  
 }
 /***********************************************************************************
@@ -293,8 +294,14 @@ static void mac_rx_handle(LoRaPkg* p)
 	Route.updateLinkQualityMap(p->Header.MacHeader.src, p->stat.RssiPkt);
 	PRINT_LINKQUALITY_MAP;
 	ret = mac_peek_pkg(p);
+	ESP_LOGI(TAG,"Route.getMacAddr(): %d", mac_dst);
+	ESP_LOGI(TAG,"Route.getMacAddr(): %d", Route.getMacAddr());
+	ESP_LOGI(TAG,"Route.getMacAddr(): %d", MAC_BROADCAST_ADDR);
 	if (mac_dst == Route.getMacAddr() || mac_dst == MAC_BROADCAST_ADDR) {
 		mac_rx_done++;
+		ESP_LOGI(TAG,"p->Header.type: %d", p->Header.type);
+		ESP_LOGI(TAG,"p->Header.Ack: %d", p->Header.NetHeader.ack);
+		
 		if (p->Header.type == TYPE_DATA 
 				&& p->Header.NetHeader.ack == ACK
 				&& mac_dst != MAC_BROADCAST_ADDR 
@@ -351,6 +358,7 @@ static void mac_rx_handle(LoRaPkg* p)
 			xQueueSend(mac_rx_buf, p, 0);
 	} else {
 		mac_rx_drop++;
+		 ESP_LOGI(TAG,"L2:dropping!");
 	}
 }
 /***********************************************************************************
@@ -493,6 +501,7 @@ void lora_mac_receive_task(void *pvParameter)
     uint8_t pkgbuf[255];
     uint8_t buffer[255];
     PkgType hdr_type;
+    LoRaNet src;
     LoRaPkg rxtmp;
     mac_net_param_t *param = (mac_net_param_t *)pvParameter;
     lora_mac_hook *hook = &(param->mac_hooks);
@@ -517,7 +526,7 @@ void lora_mac_receive_task(void *pvParameter)
                 if (hook->macRxStart != NULL) hook->macRxStart();
 
                 SET_RADIO2(RadioRx(RX_TIMEOUT), irqRegs);
-                //LoRaReceive(buffer, sizeof(buffer));
+                
                 ESP_LOGI(TAG,"Receive irqRegs:%d", irqRegs);
 
                 if (hook->macRxEnd != NULL) hook->macRxEnd();
@@ -531,49 +540,40 @@ void lora_mac_receive_task(void *pvParameter)
                 {
                     phy_rx_timeout++;
                     ESP_LOGI(TAG,"RX timeout!");
-                } 
-                else if (IS_IRQ(irqRegs, LLCC68_IRQ_RX_DONE)) 
-                {
-                    phy_rx_done++;
-                    GetPayload(pkgbuf, &pkgsize, sizeof(pkgbuf));
-                    ESP_LOGI(TAG, "RX done, size: %u, time: %lu", pkgsize, (unsigned long)(RTOS_TIME - timer));
+                } else if (IS_IRQ(irqRegs, LLCC68_IRQ_RX_DONE)) 
+				{
+    				phy_rx_done++;
+    				//GetPayload(pkgbuf, &pkgsize, sizeof(pkgbuf)); 
+					//LoRaReceive(buffer, sizeof(buffer));
+					ReadBuffer(buffer, sizeof(buffer));
+    				ESP_LOGI(TAG, "Received packet size: %d", sizeof(buffer));
 
-                   hdr_type = (PkgType)(pkgbuf[0]);
+    				if (sizeof(buffer) >= sizeof(LoRaPkg)) 
+    				{
+        				LoRaPkg rxtmp; 
+        				memcpy(&rxtmp, buffer, sizeof(rxtmp)); 
 
-					// Log the received header type and package size
-					ESP_LOGI(TAG, "Received packet header: %d", hdr_type);
-					ESP_LOGI(TAG, "Package size: %d", pkgsize);
-                    mac_rx_handle(&rxtmp);
-                    // Check if the header type is valid and the package size matches expected size
-					if (hdr_type < TYPE_MAX && pkgsize == pkgSizeMap[hdr_type][1]) 
-					{
-    					ESP_LOGI(TAG, "Valid header type: %d and valid package size: %d", hdr_type, pkgsize);
-    
-    					// Copy the package buffer to the structure for further processing
-    					memcpy(&rxtmp, pkgbuf, pkgsize);
-    
-    					// Retrieve RSSI and SNR values from the packet status
-    					int8_t rssi, snr;
-    					GetPacketStatus(&rssi, &snr);
-    
-    					// Store the RSSI and SNR values in the package structure
-    					rxtmp.stat.RssiPkt = rssi;
-    					rxtmp.stat.SnrPkt = snr;
-    
-    					// Log the RSSI and SNR values
-    					ESP_LOGI(TAG, "RSSI: %d, SNR: %d", rssi, snr);
-    
-    					// Handle the received packet by passing it to the mac_rx_handle function
-    					mac_rx_handle(&rxtmp);
-    
-    					// Log the successful packet processing
-    					ESP_LOGI(TAG, "Packet processed successfully.");
-					}else 
-					{
-    					// Log an error if the header type or package size is invalid
-    					ESP_LOGE(TAG, "Invalid header type: %d or package size: %d", hdr_type, pkgsize);
-					}
-                }
+        				// Log the received data for comparison
+        				ESP_LOGI(TAG, "Received packet - type: %u, src: %u, dst: %u, temp: %.2f, volt: %u", 
+                 		rxtmp.Header.type, rxtmp.Header.NetHeader.src, rxtmp.Header.NetHeader.dst,
+                 		rxtmp.AppData.temp, rxtmp.AppData.volt);
+
+        				int8_t rssi, snr;
+        				GetPacketStatus(&rssi, &snr);
+        				rxtmp.stat.RssiPkt = rssi;
+        				rxtmp.stat.SnrPkt = snr;
+
+        				ESP_LOGI(TAG, "RSSI: %d, SNR: %d", rssi, snr);
+
+        				mac_rx_handle(&rxtmp); // Process the received packet
+    				}
+    				else 
+    				{
+        				ESP_LOGE(TAG, "Invalid package size: %d, expected at least: %zu", pkgsize, sizeof(LoRaPkg));
+    				}
+				}
+
+
             }
         }
         vTaskDelay(pdMS_TO_TICKS(1000));  // Delay to avoid tight looping
@@ -608,10 +608,13 @@ void lora_mac_transmit_task(void *pvParameter)
 
     while (1) 
     {
-        if (uxQueueMessagesWaiting(mac_tx_buf) != 0) 
-        {
-            if (tx_timer == 0 && xQueueReceive(mac_tx_buf, &txtmp, 0) == pdPASS) 
+        //if (uxQueueMessagesWaiting(mac_tx_buf) != 0) 
+        //{
+            if (xQueueReceive(mac_tx_buf, &txtmp, 0) == pdPASS) 
             {
+                ESP_LOGI(TAG, "MacTx Sending packet - type: %u, src: %u, dst: %u, temp: %.2f, volt: %u", 
+                 txtmp.Header.type, txtmp.Header.NetHeader.src, txtmp.Header.NetHeader.dst,
+                 txtmp.AppData.temp, txtmp.AppData.volt);
                 mac_tx_done++;
                 tx_timer = (xTaskGetTickCount() & TX_TIMER_MASK);
                 hdr_type = txtmp.Header.type;
@@ -622,6 +625,8 @@ void lora_mac_transmit_task(void *pvParameter)
                 if (hook->macTxStart != NULL) hook->macTxStart();
 
                 SET_RADIO(RadioSend(TX_TIMEOUT), irqRegs);
+                WriteBuffer((uint8_t *)&txtmp, pkgsize);
+                //LoRaSend((uint8_t *)&txtmp, pkgsize, LLCC68_TXMODE_SYNC);
                 ESP_LOGI(TAG, "Transmission irqRegs: %d", irqRegs);
 
                 if (hook->macTxEnd != NULL) hook->macTxEnd();
@@ -646,7 +651,7 @@ void lora_mac_transmit_task(void *pvParameter)
             {
                 --tx_timer;
             }
-        }
+        //}
 
         vTaskDelay(pdMS_TO_TICKS(1000));  // Delay to avoid tight looping
     }
