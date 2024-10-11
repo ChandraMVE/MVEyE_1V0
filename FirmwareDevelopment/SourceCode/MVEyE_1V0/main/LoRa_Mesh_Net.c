@@ -179,11 +179,8 @@ void lora_net_tx_task(void *pvParameter)
 		ESP_LOGI(TAG,"I am in LoRa Net_TX");
         if (xQueueReceive(net_tx_buf, &p, portMAX_DELAY) == pdPASS) 
         {
-			//ESP_LOGI(TAG, "Destination:%d",p.Header.NetHeader.dst);
-			ESP_LOGI(TAG, "network Sending packet - type: %u, src: %u, dst: %u, temp: %.2f, volt: %u", 
-                 p.Header.type, p.Header.NetHeader.src, p.Header.NetHeader.dst,
-                 p.AppData.temp, p.AppData.volt);
-			ESP_LOGI(TAG, "local:%d",Route.getNetAddr());
+			ESP_LOGI(TAG, "Destination:%d",p.Header.NetHeader.dst);
+		    ESP_LOGI(TAG, "local:%d",Route.getNetAddr());
             // Skip processing if the destination is local
             if (p.Header.NetHeader.dst == Route.getNetAddr())
             {
@@ -197,13 +194,16 @@ void lora_net_tx_task(void *pvParameter)
             } else {
                 nexthop = Route.getRouteTo(p.Header.NetHeader.dst);
                 ESP_LOGI(TAG,"next hop:%d",nexthop);
-                if (nexthop < 0) {
+                if (nexthop < 0) {//no route found -1
                     net_tx_drop++; 
                     GEN_Route_Adv(t, p.Header.NetHeader.dst);
                     ESP_LOGI(TAG, "L3: No route to: 0x%02x, send Routte_Adv, pid: %d", p.Header.NetHeader.dst, t.Header.NetHeader.pid); // Debug log for RA
+                    ESP_LOGI(TAG, "network Sending packet - type: %u, src: %u, dst: %u, temp: %.2f, volt: %u", 
+                 	t.Header.type, p.Header.NetHeader.src, t.Header.NetHeader.dst,
+                 	t.AppData.temp, t.AppData.volt);
                     NET_TX(&t, mac_tx_buf, portMAX_DELAY, hook);
                     ESP_LOGI(TAG, "nexthop NET Tx done!");
-                } else {
+                } else {//route found
                     net_fwd_done++;
                     p.Header.MacHeader.dst = nexthop;
                     ESP_LOGI(TAG, "L3: Tx dst: 0x%02x, nh: 0x%02x", p.Header.NetHeader.dst, nexthop);

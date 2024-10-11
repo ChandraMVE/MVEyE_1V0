@@ -68,7 +68,7 @@
         uint32_t io_num;            \
         gpio_intr_enable(LORA_DIO1); \
         fun; \
-        xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY);  \
+        xSemaphoreTake(m_irq_Semaphore, portMAX_DELAY); \
         irq = GetIrqStatus();  \
         ClearIrqStatus(LLCC68_IRQ_ALL);  \
     } while (0)
@@ -77,7 +77,7 @@
         uint32_t io_num; \
         gpio_intr_enable(LORA_DIO3); \
         fun; \
-        xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY);  \
+        xSemaphoreTake(m_irq_Semaphore, portMAX_DELAY); \
         irq = GetIrqStatus();  \
         ClearIrqStatus(LLCC68_IRQ_ALL);  \
     } while (0)
@@ -126,8 +126,9 @@ uint32_t mac_rx_done;
 uint32_t mac_rx_drop;           
 uint32_t mac_tx_done;           
 uint32_t mac_ack_respon;        
-static uint8_t tx_timer;       
-static QueueHandle_t gpio_evt_queue = NULL; 
+static uint8_t tx_timer; 
+SemaphoreHandle_t m_irq_Semaphore;      
+
 /*******************************************************************************
  * Function: dio1_isr_handler
  * Description: Interrupt Service Routine (ISR) for DIO1 pin. 
@@ -138,16 +139,18 @@ static QueueHandle_t gpio_evt_queue = NULL;
  * Date           : 20SEP2024
  ******************************************************************************/
 void IRAM_ATTR dio1_isr_handler(void *arg) {
-    // Give semaphore from ISR
-    uint32_t gpio_num = (uint32_t) arg;
-    xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
-    gpio_intr_disable(LORA_DIO1);
+   BaseType_t yield_req = pdFALSE;
+	gpio_intr_disable(LORA_DIO1);
+	xSemaphoreGiveFromISR(m_irq_Semaphore, &yield_req);
+	portYIELD_FROM_ISR(yield_req);
     
 }
 void IRAM_ATTR rx_done_isr_handler(void *arg) {
-   	uint32_t gpio_num = (uint32_t) arg;
-    xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
-    gpio_intr_disable(LORA_DIO3);
+   	BaseType_t yield_req = pdFALSE;
+	gpio_intr_disable(LORA_DIO3);
+	xSemaphoreGiveFromISR(m_irq_Semaphore, &yield_req);
+	portYIELD_FROM_ISR(yield_req);
+    
    
 }
 /***********************************************************************************
@@ -163,7 +166,7 @@ void IRAM_ATTR rx_done_isr_handler(void *arg) {
  ***********************************************************************************/
 void init_dio1_interrupt(void)
 {
-    gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
+   
     gpio_config_t io_conf = {
         .intr_type = GPIO_INTR_POSEDGE,   // Interrupt on Rising edge
         .mode = GPIO_MODE_INPUT,          // Set pin as input
@@ -245,10 +248,12 @@ bool mac_peek_pkg(LoRaPkg* p) {
         for (i = 0; i < p->RouteData.hops; i++) {
             ESP_LOGI(TAG,"L2: recv RA_List_%d: 0x%02x", i, p->RouteData.RA_List[i]); // Log RA list
         }
+        /* ignore RA from local */
         if (p->Header.NetHeader.src == Route.getNetAddr()) {
             ESP_LOGI(TAG,"ignore RA from local");
             return false;
         }
+        /* ignore previous received RA */
         for (i = 0; i < p->RouteData.hops; i++) {
             if (p->RouteData.RA_List[i] == Route.getNetAddr()) {
                 ESP_LOGI(TAG,"ignore RA already process");
@@ -260,6 +265,7 @@ bool mac_peek_pkg(LoRaPkg* p) {
             Route.updateRoute(p->RouteData.RA_List[i], p->Header.MacHeader.src, p->RouteData.hops - i - 1);
         }
         if (p->Header.NetHeader.dst != Route.getNetAddr()) {
+            /* append NetAddr to RA_List, then rebroadcast */
             p->RouteData.RA_List[p->RouteData.hops] = Route.getNetAddr();  // Add current node to RA list
             p->Header.NetHeader.hop++; p->RouteData.hops++;  // Increment hop count
             ESP_LOGI(TAG,"L2: RA rebroadcast!");
@@ -292,7 +298,7 @@ static void mac_rx_handle(LoRaPkg* p)
 	LoRaPkg t; bool ret;
 	uint8_t mac_dst = p->Header.MacHeader.dst;
 	Route.updateLinkQualityMap(p->Header.MacHeader.src, p->stat.RssiPkt);
-	PRINT_LINKQUALITY_MAP;
+	//PRINT_LINKQUALITY_MAP;
 	ret = mac_peek_pkg(p);
 	ESP_LOGI(TAG,"Route.getMacAddr(): %d", mac_dst);
 	ESP_LOGI(TAG,"Route.getMacAddr(): %d", Route.getMacAddr());
@@ -310,6 +316,7 @@ static void mac_rx_handle(LoRaPkg* p)
 			ESP_LOGI(TAG,"L2: send ack! pid: %d", p->Header.NetHeader.pid);
 			GEN_ACK(t, p);
 			xQueueSend(mac_tx_buf, &t, 0);
+			/* check dup data */
 			if (p->Header.NetHeader.pid == _last_seen_pid[p->Header.MacHeader.src]) {
 				ESP_LOGI(TAG,"L2: dup data, drop!");
 				mac_rx_drop++;

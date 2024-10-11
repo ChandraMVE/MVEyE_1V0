@@ -58,7 +58,7 @@ extern LinkQualityEntry _LinkQuality[];
 	do {  \
 		for (uint8_t _x=0; _x<ROUTING_TABLE_SIZE; _x++) { \
 			if ( _routes[_x].state == Valid) \
-				NRF_LOG_DBG("Route[%d]: 0x%02x->0x%02x, hop: %d", _x, \
+				ESP_LOGD("Route[%d]: 0x%02x->0x%02x, hop: %d", _x, \
 			_routes[_x].dest, _routes[_x].next_hop, _routes[_x].hops); \
 		} \
 	} while (0)
@@ -67,7 +67,7 @@ extern LinkQualityEntry _LinkQuality[];
 	do { \
 		for (uint8_t _y=0; _y<255; _y++) { \
 			if (_LinkQuality[_y].valid == true) \
-				NRF_LOG_DBG("LinkQMap[0x%02x]: %d", _y, _LinkQuality[_y].quality); \
+				ESP_LOGD("LinkQMap[0x%02x]: %d", _y, _LinkQuality[_y].quality); \
 		} \
 	} while (0)
 #else
